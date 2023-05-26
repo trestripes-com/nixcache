@@ -5,19 +5,12 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use async_compression::tokio::bufread::{BrotliEncoder, XzEncoder, ZstdEncoder};
 use async_compression::Level as CompressionLevel;
-use axum::{
-    extract::{BodyStream, Extension, Json},
-    http::HeaderMap,
-};
+use axum::{extract::{BodyStream, Extension, Json}, http::HeaderMap};
 use bytes::{Bytes, BytesMut};
 use chrono::Utc;
 use digest::Output as DigestOutput;
 use futures::future::join_all;
 use futures::StreamExt;
-use sea_orm::entity::prelude::*;
-use sea_orm::sea_query::Expr;
-use sea_orm::ActiveValue::Set;
-use sea_orm::{QuerySelect, TransactionTrait};
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncBufRead, AsyncRead, AsyncReadExt, BufReader};
 use tokio::sync::{OnceCell, Semaphore};
@@ -30,6 +23,7 @@ use crate::config::CompressionType;
 use crate::error::{ErrorKind, ServerError, ServerResult};
 use crate::narinfo::Compression;
 use crate::{RequestState, State};
+
 use attic::api::v1::upload_path::{
     UploadPathNarInfo, UploadPathResult, UploadPathResultKind, ATTIC_NAR_INFO,
     ATTIC_NAR_INFO_PREAMBLE_SIZE,
@@ -39,13 +33,6 @@ use attic::stream::{read_chunk_async, StreamHasher};
 use attic::util::Finally;
 
 use crate::chunking::chunk_stream;
-use crate::database::entity::cache;
-use crate::database::entity::chunk::{self, ChunkState, Entity as Chunk};
-use crate::database::entity::chunkref::{self, Entity as ChunkRef};
-use crate::database::entity::nar::{self, Entity as Nar, NarState};
-use crate::database::entity::object::{self, Entity as Object};
-use crate::database::entity::Json as DbJson;
-use crate::database::{AtticDatabase, ChunkGuard, NarGuard};
 
 /// Number of chunks to upload to the storage backend at once.
 const CONCURRENT_CHUNK_UPLOADS: usize = 10;

@@ -33,29 +33,23 @@
       };
 
     in {
-      devShell = pkgs.devshell.mkShell {
-        packages = with pkgs; [
+      devShell = pkgs.mkShell {
+        buildInputs = with pkgs; [
           git
           rust-analyzer
           cargo-edit
 
           custom-rust
           gcc
+          pkg-config
+          nixVersions.nix_2_10
+          boost
+          libclang.lib
+          rustPlatform.bindgenHook
         ];
-        commands = [
-          {
-            name = "clippy";
-            category = "rust";
-            help = "rust linter";
-            command = ''cargo clippy -- \
-              -W clippy::pedantic \
-              -A clippy::doc_markdown \
-              -A clippy::missing_errors_doc
-            '';
-          }
-        ];
-        env = [
-        ];
+        NIX_PATH = "nixpkgs=${pkgs.path}";
+        LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+        RUST_SRC_PATH = "${pkgs.rustPlatform.rustcSrc}/library";
       };
     });
 }
