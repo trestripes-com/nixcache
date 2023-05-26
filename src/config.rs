@@ -19,7 +19,7 @@ pub async fn load(config_path: Option<&Path>) -> Result<Config> {
     Ok(config)
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     /// Socket address to listen on.
