@@ -7,4 +7,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.71"
+serde = { version = "1.0.163", features = ["derive"] }
 tokio = { version = "1.28.1", features = ["macros", "rt-multi-thread"] }
+toml = "0.7.4"
