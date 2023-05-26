@@ -500,6 +500,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastcdc"
+version = "3.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10010f9b2e601acfda445cb35385cf4241fce85c6e1ea702b157c39f79f8787a"
+
+[[package]]
 name = "fastrand"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -938,6 +944,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-compression",
+ "async-stream",
  "async-trait",
  "attic",
  "axum",
@@ -946,10 +953,12 @@ dependencies = [
  "chrono",
  "digest",
  "displaydoc",
+ "fastcdc",
  "futures",
  "serde",
  "sha2",
  "tokio",
+ "tokio-test",
  "tokio-util",
  "toml",
  "tower-http",
@@ -1422,6 +1431,30 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.18",
+]
+
+[[package]]
+name = "tokio-stream"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "397c988d37662c7dda6d2208364a706264bf3d6138b11d436cbac0ad38832842"
+dependencies = [
+ "futures-core",
+ "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
+name = "tokio-test"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53474327ae5e166530d17f2d956afcb4f8a004de581b3cae10f12006bc8163e3"
+dependencies = [
+ "async-stream",
+ "bytes",
+ "futures-core",
+ "tokio",
+ "tokio-stream",
 ]
 
 [[package]]

@@ -2,6 +2,7 @@ pub mod api;
 pub mod config;
 pub mod error;
 pub mod storage;
+pub mod chunking;
 
 use anyhow::Result;
 use std::sync::Arc;
