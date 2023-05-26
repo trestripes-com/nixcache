@@ -1,3 +1,4 @@
+pub mod api;
 pub mod config;
 pub mod error;
 
@@ -30,7 +31,7 @@ pub async fn run_api_server(config: Config) -> Result<()> {
     let state = State::new(config);
 
     let rest = Router::new()
-        // .merge(api::get_router())
+        .merge(api::router())
         .fallback(fallback)
         .layer(Extension(Arc::new(state)))
         .layer(TraceLayer::new_for_http())
