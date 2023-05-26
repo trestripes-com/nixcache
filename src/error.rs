@@ -1,4 +1,6 @@
 use std::fmt;
+use std::error::Error as StdError;
+use anyhow::Error as AnyError;
 use displaydoc::Display;
 use serde::Serialize;
 use tracing_error::SpanTrace;
@@ -11,25 +13,35 @@ pub type ServerResult<T> = Result<T, ServerError>;
 /// The kind of an error.
 #[derive(Debug, Display)]
 pub enum ErrorKind {
+    /// The server encountered an internal error or misconfiguration.
+    InternalServerError,
     /// The URL you requested was not found.
     NotFound,
+    /// Storage error: {0}
+    StorageError(AnyError),
 }
 impl ErrorKind {
     /// Returns a version of this error for clients.
     fn into_clients(self) -> Self {
         match self {
+            Self::InternalServerError => self,
             Self::NotFound => self,
+            Self::StorageError(_) => Self::InternalServerError,
         }
     }
 
     fn name(&self) -> &'static str {
         match self {
+            Self::InternalServerError => "InternalServerError",
             Self::NotFound => "NotFound",
+            Self::StorageError(_) => "StorageError",
         }
     }
     fn http_status_code(&self) -> StatusCode {
         match self {
+            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             Self::NotFound => StatusCode::NOT_FOUND,
+            Self::StorageError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -49,6 +61,11 @@ pub struct ServerError {
     /// Context of where the error occurred.
     context: SpanTrace,
 }
+impl ServerError {
+    pub fn storage_error(error: impl StdError + Send + Sync + 'static) -> Self {
+        ErrorKind::StorageError(AnyError::new(error)).into()
+    }
+}
 impl fmt::Display for ServerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}", self.kind)?;
@@ -66,7 +83,13 @@ impl From<ErrorKind> for ServerError {
 }
 impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
-        tracing::error!("{}", self);
+        if matches!(
+            self.kind,
+            ErrorKind::StorageError(_)
+            )
+        {
+            tracing::error!("{}", self);
+        }
 
         let sanitized = self.kind.into_clients();
 

@@ -1,6 +1,7 @@
 pub mod api;
 pub mod config;
 pub mod error;
+pub mod storage;
 
 use anyhow::Result;
 use std::sync::Arc;
