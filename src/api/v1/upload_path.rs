@@ -51,12 +51,6 @@ enum ChunkData {
     Stream(Box<dyn AsyncRead + Send + Unpin + 'static>, Hash, usize),
 }
 
-/// Result of a chunk upload.
-struct UploadChunkResult {
-    guard: ChunkGuard,
-    deduplicated: bool,
-}
-
 /// Applies compression to a stream, computing hashes along the way.
 ///
 /// Our strategy is to stream directly onto a UUID-keyed file on the
@@ -84,10 +78,6 @@ struct CompressionStream {
     file_compute: Arc<OnceCell<(DigestOutput<Sha256>, usize)>>,
 }
 
-trait UploadPathNarInfoExt {
-    fn to_active_model(&self) -> object::ActiveModel;
-}
-
 /// Uploads a new object to the cache.
 ///
 /// When clients request to upload an object, we first try to increment
@@ -97,7 +87,7 @@ trait UploadPathNarInfoExt {
 /// a new upload to the storage backend ("New NAR" case).
 #[instrument(skip_all)]
 #[axum_macros::debug_handler]
-pub(crate) async fn upload_path(
+pub async fn upload_path(
     Extension(state): Extension<State>,
     Extension(req_state): Extension<RequestState>,
     headers: HeaderMap,

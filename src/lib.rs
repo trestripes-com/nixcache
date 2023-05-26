@@ -3,6 +3,7 @@ pub mod config;
 pub mod error;
 pub mod storage;
 pub mod chunking;
+pub mod narinfo;
 
 use anyhow::Result;
 use std::sync::Arc;
