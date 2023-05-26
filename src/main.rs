@@ -8,7 +8,7 @@ async fn main() -> Result<()> {
 
     let config = config::load().await?;
 
-    run_api_server(opts.listen, config).await?;
+    run_api_server(config).await?;
 
     Ok(())
 }

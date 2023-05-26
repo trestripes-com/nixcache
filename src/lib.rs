@@ -26,6 +26,7 @@ impl State {
 pub async fn run_api_server(config: Config) -> Result<()> {
     eprintln!("Starting API server...");
 
+    let listen = config.listen;
     let state = State::new(config);
 
     let rest = Router::new()
@@ -35,8 +36,8 @@ pub async fn run_api_server(config: Config) -> Result<()> {
         .layer(TraceLayer::new_for_http())
         .layer(CatchPanicLayer::new());
 
-    eprintln!("Listening on {:?}...", config.listen);
-    Server::bind(&config.listen).serve(rest.into_make_service()).await?;
+    eprintln!("Listening on {:?}...", listen);
+    Server::bind(&listen).serve(rest.into_make_service()).await?;
 
     Ok(())
 }

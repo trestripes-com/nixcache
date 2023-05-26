@@ -7,7 +7,7 @@ use serde::Deserialize;
 const CONFIG_PATH: &str = "/trestripes/nixcache/config.toml";
 const LOCAL_CONFIG_PATH: &str = "./config.toml";
 
-pub async fn load(config_path: Option<&Path>) -> Result<Config> {
+pub async fn load() -> Result<Config> {
     let data = if Path::new(LOCAL_CONFIG_PATH).is_file() {
         read_to_string(Path::new(LOCAL_CONFIG_PATH)).unwrap()
     } else {
