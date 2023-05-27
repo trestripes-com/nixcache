@@ -941,6 +941,10 @@ source = "git+https://github.com/zhaofengli/nix-base32.git?rev=b850c6e9273d1c39b
 [[package]]
 name = "nixcache"
 version = "0.1.0"
+
+[[package]]
+name = "nixcache-server"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-compression",
