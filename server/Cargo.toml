@@ -1,0 +1,36 @@
+[package]
+name = "nixcache"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.71"
+async-compression = { version = "0.4.0", features = ["zstd", "brotli", "xz", "tokio"] }
+async-stream = "0.3.5"
+async-trait = "0.1.68"
+attic = { git = "https://github.com/zhaofengli/attic" }
+axum = "0.6.18"
+axum-macros = "0.3.7"
+bytes = "1.4.0"
+chrono = "0.4.24"
+digest = "0.10.7"
+displaydoc = "0.2.4"
+fastcdc = "3.0.3"
+futures = "0.3.28"
+itoa = "1.0.6"
+ryu = "1.0.13"
+serde = { version = "1.0.163", features = ["derive"] }
+serde_json = "1.0.96"
+serde_with = "3.0.0"
+sha2 = "0.10.6"
+tokio = { version = "1.28.1", features = ["macros", "rt-multi-thread", "fs", "io-std", "io-util"] }
+tokio-util = { version = "0.7.8", features = ["io", "io-util"] }
+toml = "0.7.4"
+tower-http = { version = "0.4.0", features = ["catch-panic", "trace"] }
+tracing = "0.1.37"
+tracing-error = "0.2.0"
+
+[dev-dependencies]
+tokio-test = "0.4.2"
