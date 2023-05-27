@@ -34,6 +34,8 @@ pub struct Config {
     /// Compression.
     #[serde(default = "Default::default")]
     pub compression: CompressionConfig,
+    /// Data chunking.
+    pub chunking: ChunkingConfig,
 }
 
 /// File storage configuration.
@@ -67,7 +69,7 @@ impl Default for CompressionConfig {
 impl CompressionConfig {
     pub fn level(&self) -> CompressionLevel {
         if let Some(level) = self.level {
-            return CompressionLevel::Precise(level);
+            return CompressionLevel::Precise(level.try_into().unwrap());
         }
 
         match self.r#type {
@@ -103,6 +105,42 @@ impl From<CompressionType> for NixCompression {
             CompressionType::Xz => NixCompression::Xz,
         }
     }
+}
+/// Data chunking.
+///
+/// This must be set, but a default set of values is provided
+/// through the OOBE sequence. The reason is that this allows
+/// us to provide a new set of recommended "defaults" for newer
+/// deployments without affecting existing ones.
+///
+/// Warning: If you change any of the values here, it will be
+/// difficult to reuse existing chunks for newly-uploaded NARs
+/// since the cutpoints will be different. As a result, the
+/// deduplication ratio will suffer for a while after the change.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ChunkingConfig {
+    /// The minimum NAR size to trigger chunking.
+    ///
+    /// If 0, chunking is disabled entirely for newly-uploaded
+    /// NARs.
+    ///
+    /// If 1, all newly-uploaded NARs are chunked.
+    ///
+    /// By default, the threshold is 128KB.
+    #[serde(rename = "nar-size-threshold")]
+    pub nar_size_threshold: usize,
+
+    /// The preferred minimum size of a chunk, in bytes.
+    #[serde(rename = "min-size")]
+    pub min_size: usize,
+
+    /// The preferred average size of a chunk, in bytes.
+    #[serde(rename = "avg-size")]
+    pub avg_size: usize,
+
+    /// The preferred maximum size of a chunk, in bytes.
+    #[serde(rename = "max-size")]
+    pub max_size: usize,
 }
 
 fn default_listen_address() -> SocketAddr {

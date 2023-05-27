@@ -4,7 +4,7 @@
 //! algorithm.
 
 use async_stream::try_stream;
-use bytes::{Bytes, BytesMut};
+use bytes::{Bytes, BytesMut, BufMut};
 use fastcdc::ronomon::FastCDC;
 use futures::stream::Stream;
 use tokio::io::AsyncRead;

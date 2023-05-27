@@ -19,6 +19,12 @@ pub enum ErrorKind {
     NotFound,
     /// Storage error: {0}
     StorageError(AnyError),
+    /// General request error: {0}
+    RequestError(AnyError),
+    /// Invalid compression type "{name}".
+    InvalidCompressionType { name: String },
+    /// Manifest serialization error: {0}
+    ManifestSerializationError(super::nix_manifest::Error),
 }
 impl ErrorKind {
     /// Returns a version of this error for clients.
@@ -27,6 +33,9 @@ impl ErrorKind {
             Self::InternalServerError => self,
             Self::NotFound => self,
             Self::StorageError(_) => Self::InternalServerError,
+            Self::RequestError(_) => self,
+            Self::InvalidCompressionType { .. } => self,
+            Self::ManifestSerializationError(_) => Self::InternalServerError,
         }
     }
 
@@ -35,6 +44,9 @@ impl ErrorKind {
             Self::InternalServerError => "InternalServerError",
             Self::NotFound => "NotFound",
             Self::StorageError(_) => "StorageError",
+            Self::RequestError(_) => "RequestError",
+            Self::InvalidCompressionType { .. } => "InvalidCompressionType",
+            Self::ManifestSerializationError(_) => "ManifestSerializationError",
         }
     }
     fn http_status_code(&self) -> StatusCode {
@@ -42,6 +54,9 @@ impl ErrorKind {
             Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::StorageError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::RequestError(_) => StatusCode::BAD_REQUEST,
+            Self::InvalidCompressionType { .. } => StatusCode::BAD_REQUEST,
+            Self::ManifestSerializationError(_) => StatusCode::BAD_REQUEST,
         }
     }
 }
@@ -65,6 +80,9 @@ impl ServerError {
     pub fn storage_error(error: impl StdError + Send + Sync + 'static) -> Self {
         ErrorKind::StorageError(AnyError::new(error)).into()
     }
+    pub fn request_error(error: impl StdError + Send + Sync + 'static) -> Self {
+        ErrorKind::RequestError(AnyError::new(error)).into()
+    }
 }
 impl fmt::Display for ServerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -85,7 +103,7 @@ impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
         if matches!(
             self.kind,
-            ErrorKind::StorageError(_)
+            ErrorKind::StorageError(_) | ErrorKind::RequestError(_)
             )
         {
             tracing::error!("{}", self);

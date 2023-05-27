@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::path::PathBuf;
 use serde::Deserialize;
 use tokio::io::{self, AsyncRead};
@@ -18,10 +19,9 @@ pub struct LocalStorageConfig {
 }
 
 impl LocalBackend {
-    pub async fn new(config: LocalStorageConfig) -> ServerResult<Self> {
+    pub async fn new(config: LocalStorageConfig) -> Result<Self> {
         fs::create_dir_all(&config.path)
-            .await
-            .map_err(ServerError::storage_error)?;
+            .await?;
 
         Ok(Self { config })
     }
