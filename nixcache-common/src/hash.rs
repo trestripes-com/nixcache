@@ -6,6 +6,31 @@ use sha2::{Digest, Sha256};
 
 use crate::nix_base32::{to_nix_base32, from_nix_base32};
 
+/// A hashing error.
+#[derive(Debug, Display)]
+pub enum Error {
+    /// The string lacks a colon separator.
+    NoColonSeparator,
+
+    /// Hash algorithm {0} is not supported.
+    UnsupportedHashAlgorithm(String),
+
+    /// Invalid base16 hash: {0}
+    InvalidBase16Hash(hex::FromHexError),
+
+    /// Invalid base32 hash.
+    InvalidBase32Hash,
+
+    /// Invalid length for {typ} string: Must be either {base16_len} (hexadecimal) or {base32_len} (base32), got {actual}.
+    InvalidHashStringLength {
+        typ: &'static str,
+        base16_len: usize,
+        base32_len: usize,
+        actual: usize,
+    },
+}
+impl StdError for Error {}
+
 /// A hash.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Hash {
@@ -110,28 +135,3 @@ fn decode_hash<'s>(s: &'s str, typ: &'static str, expected_bytes: usize) -> Resu
 
     Ok(v)
 }
-
-/// A hashing error.
-#[derive(Debug, Display)]
-pub enum Error {
-    /// The string lacks a colon separator.
-    NoColonSeparator,
-
-    /// Hash algorithm {0} is not supported.
-    UnsupportedHashAlgorithm(String),
-
-    /// Invalid base16 hash: {0}
-    InvalidBase16Hash(hex::FromHexError),
-
-    /// Invalid base32 hash.
-    InvalidBase32Hash,
-
-    /// Invalid length for {typ} string: Must be either {base16_len} (hexadecimal) or {base32_len} (base32), got {actual}.
-    InvalidHashStringLength {
-        typ: &'static str,
-        base16_len: usize,
-        base32_len: usize,
-        actual: usize,
-    },
-}
-impl StdError for Error {}

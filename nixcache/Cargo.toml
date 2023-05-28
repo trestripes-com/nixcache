@@ -9,7 +9,6 @@ edition = "2021"
 nixcache-common = { path = "../nixcache-common" }
 anyhow = "1.0.71"
 async-channel = "1.8.0"
-attic = { git = "https://github.com/zhaofengli/attic" }
 bytes = "1.4.0"
 clap = { version = "4.3.0", features = ["derive"] }
 const_format = "0.2.30"

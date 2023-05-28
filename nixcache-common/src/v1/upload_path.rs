@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DefaultOnError};
 
 use crate::hash::Hash;
+use crate::nix_store::StorePathHash;
 
 /// NAR information associated with a upload.
 ///

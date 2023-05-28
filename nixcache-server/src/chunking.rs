@@ -7,9 +7,23 @@ use async_stream::try_stream;
 use bytes::{Bytes, BytesMut, BufMut};
 use fastcdc::ronomon::FastCDC;
 use futures::stream::Stream;
-use tokio::io::AsyncRead;
+use tokio::io::{AsyncRead, AsyncReadExt};
 
-use attic::stream::read_chunk_async;
+/// Greedily reads from a stream to fill a buffer.
+pub async fn read_chunk_async<S: AsyncRead + Unpin + Send>(
+    stream: &mut S,
+    mut chunk: BytesMut,
+) -> std::io::Result<Bytes> {
+    while chunk.len() < chunk.capacity() {
+        let read = stream.read_buf(&mut chunk).await?;
+
+        if read == 0 {
+            break;
+        }
+    }
+
+    Ok(chunk.freeze())
+}
 
 /// Splits a streams into content-defined chunks.
 ///

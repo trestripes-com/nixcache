@@ -50,9 +50,7 @@ use serde_with::serde_as;
 
 use crate::error::{ErrorKind, ServerError, ServerResult};
 use crate::nix_manifest::{self, SpaceDelimitedList};
-use attic::hash::Hash;
-use attic::mime;
-use attic::signing::NixKeypair;
+use nixcache_common::{mime, Hash, Keypair};
 
 #[cfg(test)]
 mod tests;
@@ -186,7 +184,7 @@ impl NarInfo {
     }
 
     /// Signs the narinfo and adds the signature to the narinfo.
-    pub fn sign(&mut self, keypair: &NixKeypair) {
+    pub fn sign(&mut self, keypair: &Keypair) {
         let signature = self.sign_readonly(keypair);
         self.signature = Some(signature);
     }
@@ -228,7 +226,7 @@ impl NarInfo {
     }
 
     /// Signs the narinfo with a keypair, returning the signature.
-    fn sign_readonly(&self, keypair: &NixKeypair) -> String {
+    fn sign_readonly(&self, keypair: &Keypair) -> String {
         let fingerprint = self.fingerprint();
         keypair.sign(&fingerprint)
     }

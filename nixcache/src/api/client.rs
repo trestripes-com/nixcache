@@ -10,10 +10,8 @@ use reqwest::{header::HeaderValue, Body, Client as HttpClient, Url};
 
 use crate::config::ServerConfig;
 use super::error::Error;
-use attic::api::v1::upload_path::{
-    UploadPathNarInfo, UploadPathResult,
-};
 use nixcache_common::v1::header;
+use nixcache_common::v1::upload_path;
 
 /// The User-Agent string.
 const USER_AGENT: &str = concatcp!("Nixcache {}", env!("CARGO_PKG_VERSION"));
@@ -43,10 +41,10 @@ impl Client {
     /// Uploads a path.
     pub async fn upload_path<S>(
         &self,
-        nar_info: UploadPathNarInfo,
+        nar_info: upload_path::Request,
         stream: S,
         force_preamble: bool,
-    ) -> Result<Option<UploadPathResult>>
+    ) -> Result<Option<upload_path::Response>>
     where
         S: TryStream<Ok = Bytes> + Send + Sync + 'static,
         S::Error: Into<Box<dyn StdError + Send + Sync>> + Send + Sync,

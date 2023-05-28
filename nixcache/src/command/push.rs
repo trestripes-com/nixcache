@@ -17,10 +17,10 @@ use clap::Parser;
 use crate::api::Client;
 use crate::cli::Opts;
 use crate::config::Config;
-use attic::api::v1::upload_path::{UploadPathNarInfo, UploadPathResult, UploadPathResultKind};
-use attic::cache::CacheName;
 use attic::error::AtticResult;
-use attic::nix_store::{NixStore, StorePath, StorePathHash, ValidPathInfo};
+use attic::nix_store::{NixStore, StorePath, ValidPathInfo};
+use nixcache_common::nix_store::StorePathHash;
+use nixcache_common::v1::upload_path::{Request, Response, ResponseKind};
 
 /// Push closures to a binary cache.
 #[derive(Debug, Parser)]
@@ -305,8 +305,7 @@ pub async fn upload_path(
             })
             .collect::<Result<Vec<String>, anyhow::Error>>()?;
 
-        UploadPathNarInfo {
-            cache: CacheName::new("placeholder".to_string()).unwrap(),
+        Request {
             store_path_hash: path.to_hash(),
             store_path: full_path,
             references,
@@ -352,26 +351,19 @@ pub async fn upload_path(
         .await
     {
         Ok(r) => {
-            let r = r.unwrap_or(UploadPathResult {
-                kind: UploadPathResultKind::Uploaded,
+            let r = r.unwrap_or(Response {
+                kind: ResponseKind::Uploaded,
                 file_size: None,
-                frac_deduplicated: None,
             });
 
             let info_string: String = match r.kind {
-                UploadPathResultKind::Deduplicated => "deduplicated".to_string(),
+                ResponseKind::Deduplicated => "deduplicated".to_string(),
                 _ => {
                     let elapsed = start.elapsed();
                     let seconds = elapsed.as_secs_f64();
                     let speed = (path_info.nar_size as f64 / seconds) as u64;
 
                     let mut s = format!("{}/s", HumanBytes(speed));
-
-                    if let Some(frac_deduplicated) = r.frac_deduplicated {
-                        if frac_deduplicated > 0.01f64 {
-                            s += &format!(", {:.1}% deduplicated", frac_deduplicated * 100.0);
-                        }
-                    }
 
                     s
                 }

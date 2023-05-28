@@ -7,7 +7,6 @@ use async_compression::tokio::bufread::{BrotliEncoder, XzEncoder, ZstdEncoder};
 use async_compression::Level as CompressionLevel;
 use axum::{extract::{BodyStream, Extension, Json}, http::HeaderMap};
 use bytes::BytesMut;
-use chrono::Utc;
 use digest::Output as DigestOutput;
 use futures::future::join_all;
 use futures::StreamExt;
@@ -18,17 +17,14 @@ use tokio::task::spawn;
 use tokio_util::io::StreamReader;
 use tracing::instrument;
 
-use crate::config::CompressionType;
-use crate::error::{ErrorKind, ServerError, ServerResult};
-use crate::narinfo::Compression;
-use crate::State;
-
+use nixcache_common::Hash;
 use nixcache_common::v1::header;
 use nixcache_common::v1::upload_path::{Request, Response, ResponseKind};
-use attic::hash::Hash;
-use attic::stream::{read_chunk_async, StreamHasher};
-
-use crate::chunking::chunk_stream;
+use crate::config::CompressionType;
+use crate::error::{ErrorKind, ServerError, ServerResult};
+use crate::State;
+use crate::chunking::{chunk_stream, read_chunk_async};
+use crate::stream::StreamHasher;
 
 /// Number of chunks to upload to the storage backend at once.
 const CONCURRENT_CHUNK_UPLOADS: usize = 10;
@@ -71,7 +67,7 @@ pub async fn upload_path(
         stream.map(|r| r.map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))),
     );
 
-    let upload_info: UploadPathNarInfo = {
+    let upload_info: Request = {
         if let Some(preamble_size_bytes) = headers.get(header::NAR_INFO_PREAMBLE_SIZE) {
             // Read from the beginning of the PUT body
             let preamble_size: usize = preamble_size_bytes
@@ -124,7 +120,7 @@ pub async fn upload_path(
 /// us. The `nar` table can hold duplicate NARs which can be deduplicated
 /// in a background process.
 async fn upload_path_new(
-    upload_info: UploadPathNarInfo,
+    upload_info: Request,
     stream: impl AsyncRead + Send + Unpin + 'static,
     state: &State,
 ) -> ServerResult<Json<Response>> {
@@ -141,7 +137,7 @@ async fn upload_path_new(
 ///
 /// We upload the entire NAR as a single chunk.
 async fn upload_path_new_unchunked(
-    upload_info: UploadPathNarInfo,
+    upload_info: Request,
     stream: impl AsyncRead + Send + Unpin + 'static,
     state: &State,
 ) -> ServerResult<Json<Response>> {
@@ -204,7 +200,7 @@ async fn upload_path_new_unchunked(
 
 /// Uploads a path when there is no matching NAR in the global cache (chunked).
 async fn upload_path_new_chunked(
-    upload_info: UploadPathNarInfo,
+    upload_info: Request,
     stream: impl AsyncRead + Send + Unpin + 'static,
     state: &State,
 ) -> ServerResult<Json<Response>> {

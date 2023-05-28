@@ -5,6 +5,7 @@ pub mod storage;
 pub mod chunking;
 pub mod narinfo;
 pub mod nix_manifest;
+pub mod stream;
 
 use anyhow::Result;
 use std::sync::Arc;
