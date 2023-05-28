@@ -1,59 +1,39 @@
 use std::error::Error as StdError;
-use std::fmt;
 use anyhow::Result;
 use bytes::Bytes;
 use const_format::concatcp;
-use serde::Deserialize;
-use displaydoc::Display;
 use futures::{
     future,
     stream::{self, StreamExt, TryStream, TryStreamExt},
 };
-use reqwest::{
-    header::{HeaderValue, USER_AGENT},
-    Body, Client as HttpClient, Response, StatusCode, Url,
-};
+use reqwest::{header::HeaderValue, Body, Client as HttpClient, Url};
 
 use crate::config::ServerConfig;
+use super::error::Error;
 use attic::api::v1::upload_path::{
-    UploadPathNarInfo, UploadPathResult, ATTIC_NAR_INFO, ATTIC_NAR_INFO_PREAMBLE_SIZE,
+    UploadPathNarInfo, UploadPathResult,
 };
+use nixcache_common::v1::header;
 
-/// The User-Agent string of Attic.
-const ATTIC_USER_AGENT: &str =
-    concatcp!("Nixcache {}", env!("CARGO_PKG_VERSION"));
+/// The User-Agent string.
+const USER_AGENT: &str = concatcp!("Nixcache {}", env!("CARGO_PKG_VERSION"));
 
 /// The size threshold to send the upload info as part of the PUT body.
 const NAR_INFO_PREAMBLE_THRESHOLD: usize = 4 * 1024; // 4 KiB
 
-/// The Attic API client.
+/// The API client.
 #[derive(Debug, Clone)]
-pub struct ApiClient {
+pub struct Client {
     /// Base endpoint of the server.
     endpoint: Url,
     /// An initialized HTTP client.
     client: HttpClient,
 }
 
-/// An API error.
-#[derive(Debug, Display)]
-pub enum ApiError {
-    /// {0}
-    Structured(StructuredApiError),
-    /// HTTP {0}: {1}
-    Unstructured(StatusCode, String),
-}
-#[derive(Debug, Clone, Deserialize)]
-pub struct StructuredApiError {
-    #[allow(dead_code)]
-    code: u16,
-    error: String,
-    message: String,
-}
-
-impl ApiClient {
+impl Client {
     pub fn from_server_config(config: ServerConfig) -> Result<Self> {
-        let client = build_http_client();
+        let client = reqwest::Client::builder()
+            .build()?;
 
         Ok(Self {
             endpoint: Url::parse(&config.endpoint)?,
@@ -77,7 +57,7 @@ impl ApiClient {
         let mut req = self
             .client
             .put(endpoint)
-            .header(USER_AGENT, HeaderValue::from_str(ATTIC_USER_AGENT)?);
+            .header(reqwest::header::USER_AGENT, HeaderValue::from_str(USER_AGENT)?);
 
         if force_preamble || upload_info_json.len() >= NAR_INFO_PREAMBLE_THRESHOLD {
             let preamble = Bytes::from(upload_info_json);
@@ -86,11 +66,11 @@ impl ApiClient {
 
             let chained = preamble_stream.chain(stream.into_stream());
             req = req
-                .header(ATTIC_NAR_INFO_PREAMBLE_SIZE, preamble_len)
+                .header(header::NAR_INFO_PREAMBLE_SIZE, preamble_len)
                 .body(Body::wrap_stream(chained));
         } else {
             req = req
-                .header(ATTIC_NAR_INFO, HeaderValue::from_str(&upload_info_json)?)
+                .header(header::NAR_INFO, HeaderValue::from_str(&upload_info_json)?)
                 .body(Body::wrap_stream(stream));
         }
 
@@ -102,32 +82,8 @@ impl ApiClient {
                 Err(_) => Ok(None),
             }
         } else {
-            let api_error = ApiError::try_from_response(res).await?;
+            let api_error = Error::try_from_response(res).await?;
             Err(api_error.into())
         }
     }
-}
-impl StdError for ApiError {}
-
-impl ApiError {
-    async fn try_from_response(response: Response) -> Result<Self> {
-        let status = response.status();
-        let text = response.text().await?;
-        match serde_json::from_str(&text) {
-            Ok(s) => Ok(Self::Structured(s)),
-            Err(_) => Ok(Self::Unstructured(status, text)),
-        }
-    }
-}
-
-impl fmt::Display for StructuredApiError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.error, self.message)
-    }
-}
-
-fn build_http_client() -> HttpClient {
-    reqwest::Client::builder()
-        .build()
-        .unwrap()
 }

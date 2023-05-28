@@ -6,7 +6,7 @@ use anyhow::anyhow;
 use async_compression::tokio::bufread::{BrotliEncoder, XzEncoder, ZstdEncoder};
 use async_compression::Level as CompressionLevel;
 use axum::{extract::{BodyStream, Extension, Json}, http::HeaderMap};
-use bytes::{Bytes, BytesMut};
+use bytes::BytesMut;
 use chrono::Utc;
 use digest::Output as DigestOutput;
 use futures::future::join_all;
@@ -23,10 +23,8 @@ use crate::error::{ErrorKind, ServerError, ServerResult};
 use crate::narinfo::Compression;
 use crate::State;
 
-use attic::api::v1::upload_path::{
-    UploadPathNarInfo, UploadPathResult, UploadPathResultKind, ATTIC_NAR_INFO,
-    ATTIC_NAR_INFO_PREAMBLE_SIZE,
-};
+use nixcache_common::v1::header;
+use nixcache_common::v1::upload_path::{Request, Response, ResponseKind};
 use attic::hash::Hash;
 use attic::stream::{read_chunk_async, StreamHasher};
 
@@ -68,27 +66,27 @@ pub async fn upload_path(
     Extension(state): Extension<Arc<State>>,
     headers: HeaderMap,
     stream: BodyStream,
-) -> ServerResult<Json<UploadPathResult>> {
+) -> ServerResult<Json<Response>> {
     let mut stream = StreamReader::new(
         stream.map(|r| r.map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))),
     );
 
     let upload_info: UploadPathNarInfo = {
-        if let Some(preamble_size_bytes) = headers.get(ATTIC_NAR_INFO_PREAMBLE_SIZE) {
+        if let Some(preamble_size_bytes) = headers.get(header::NAR_INFO_PREAMBLE_SIZE) {
             // Read from the beginning of the PUT body
             let preamble_size: usize = preamble_size_bytes
                 .to_str()
                 .map_err(|_| {
                     ErrorKind::RequestError(anyhow!(
                         "{} has invalid encoding",
-                        ATTIC_NAR_INFO_PREAMBLE_SIZE
+                        header::NAR_INFO_PREAMBLE_SIZE
                     ))
                 })?
                 .parse()
                 .map_err(|_| {
                     ErrorKind::RequestError(anyhow!(
                         "{} must be a valid unsigned integer",
-                        ATTIC_NAR_INFO_PREAMBLE_SIZE
+                        header::NAR_INFO_PREAMBLE_SIZE
                     ))
                 })?;
 
@@ -109,11 +107,11 @@ pub async fn upload_path(
             }
 
             serde_json::from_slice(&preamble).map_err(ServerError::request_error)?
-        } else if let Some(nar_info_bytes) = headers.get(ATTIC_NAR_INFO) {
+        } else if let Some(nar_info_bytes) = headers.get(header::NAR_INFO) {
             // Read from X-Attic-Nar-Info header
             serde_json::from_slice(nar_info_bytes.as_bytes()).map_err(ServerError::request_error)?
         } else {
-            return Err(ErrorKind::RequestError(anyhow!("{} must be set", ATTIC_NAR_INFO)).into());
+            return Err(ErrorKind::RequestError(anyhow!("{} must be set", header::NAR_INFO)).into());
         }
     };
 
@@ -129,7 +127,7 @@ async fn upload_path_new(
     upload_info: UploadPathNarInfo,
     stream: impl AsyncRead + Send + Unpin + 'static,
     state: &State,
-) -> ServerResult<Json<UploadPathResult>> {
+) -> ServerResult<Json<Response>> {
     let nar_size_threshold = state.config.chunking.nar_size_threshold;
 
     if nar_size_threshold == 0 || upload_info.nar_size < nar_size_threshold {
@@ -146,7 +144,7 @@ async fn upload_path_new_unchunked(
     upload_info: UploadPathNarInfo,
     stream: impl AsyncRead + Send + Unpin + 'static,
     state: &State,
-) -> ServerResult<Json<UploadPathResult>> {
+) -> ServerResult<Json<Response>> {
     let compression_config = &state.config.compression;
     let compression_type = compression_config.r#type;
     let compression_level = compression_config.level();
@@ -198,10 +196,9 @@ async fn upload_path_new_unchunked(
     //         ..Default::default()
     //     };
 
-    Ok(Json(UploadPathResult {
-        kind: UploadPathResultKind::Uploaded,
+    Ok(Json(Response {
+        kind: ResponseKind::Uploaded,
         file_size: Some(chunk.file_size),
-        frac_deduplicated: None,
     }))
 }
 
@@ -210,14 +207,11 @@ async fn upload_path_new_chunked(
     upload_info: UploadPathNarInfo,
     stream: impl AsyncRead + Send + Unpin + 'static,
     state: &State,
-) -> ServerResult<Json<UploadPathResult>> {
+) -> ServerResult<Json<Response>> {
     let chunking_config = &state.config.chunking;
     let compression_config = &state.config.compression;
     let compression_type = compression_config.r#type;
     let compression_level = compression_config.level();
-    let compression: Compression = compression_type.into();
-
-    let nar_size_db = i64::try_from(upload_info.nar_size).map_err(ServerError::request_error)?;
 
     let stream = stream.take(upload_info.nar_size as u64);
     let (stream, nar_compute) = StreamHasher::new(stream, Sha256::new());
@@ -324,10 +318,9 @@ async fn upload_path_new_chunked(
         // new_object
     // })
 
-    Ok(Json(UploadPathResult {
-        kind: UploadPathResultKind::Uploaded,
+    Ok(Json(Response {
+        kind: ResponseKind::Uploaded,
         file_size: Some(file_size),
-        frac_deduplicated: None,
     }))
 }
 

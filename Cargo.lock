@@ -1217,6 +1217,7 @@ dependencies = [
  "enum-as-inner",
  "futures",
  "indicatif",
+ "nixcache-common",
  "reqwest",
  "serde",
  "serde_json",
@@ -1224,6 +1225,18 @@ dependencies = [
  "toml",
  "tracing-subscriber",
  "xdg",
+]
+
+[[package]]
+name = "nixcache-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "displaydoc",
+ "hex",
+ "serde",
+ "serde_with 3.0.0",
+ "sha2",
 ]
 
 [[package]]
@@ -1244,6 +1257,7 @@ dependencies = [
  "fastcdc",
  "futures",
  "itoa",
+ "nixcache-common",
  "ryu",
  "serde",
  "serde_json",

@@ -14,7 +14,7 @@ use indicatif::{MultiProgress, HumanBytes, ProgressBar, ProgressState, ProgressS
 use tokio::task::{spawn, JoinHandle};
 use clap::Parser;
 
-use crate::api::ApiClient;
+use crate::api::Client;
 use crate::cli::Opts;
 use crate::config::Config;
 use attic::api::v1::upload_path::{UploadPathNarInfo, UploadPathResult, UploadPathResultKind};
@@ -51,7 +51,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .map(|p| store.follow_store_path(p))
         .collect::<std::result::Result<Vec<_>, _>>()?;
 
-    let api = ApiClient::from_server_config(config.server.clone())?;
+    let api = Client::from_server_config(config.server.clone())?;
 
     let push_config = PushConfig {
         num_workers: sub.jobs,
@@ -116,7 +116,7 @@ pub struct PushSessionConfig {
 /// checking for paths that already exist on the remote
 /// cache.
 pub struct Pusher {
-    api: ApiClient,
+    api: Client,
     store: Arc<NixStore>,
     workers: Vec<JoinHandle<HashMap<StorePath, Result<()>>>>,
     sender: JobSender,
@@ -139,7 +139,7 @@ struct NarStreamProgress<S> {
 impl Pusher {
     pub fn new(
         store: Arc<NixStore>,
-        api: ApiClient,
+        api: Client,
         mp: MultiProgress,
         config: PushConfig,
     ) -> Self {
@@ -205,7 +205,7 @@ impl Pusher {
     async fn worker(
         receiver: JobReceiver,
         store: Arc<NixStore>,
-        api: ApiClient,
+        api: Client,
         mp: MultiProgress,
         _config: PushConfig,
     ) -> HashMap<StorePath, Result<()>> {
@@ -241,7 +241,7 @@ impl PushPlan {
     /// Creates a plan.
     async fn plan(
         store: Arc<NixStore>,
-        _api: &ApiClient,
+        _api: &Client,
         roots: Vec<StorePath>,
         no_closure: bool,
     ) -> Result<Self> {
@@ -284,7 +284,7 @@ impl PushPlan {
 pub async fn upload_path(
     path_info: ValidPathInfo,
     store: Arc<NixStore>,
-    api: ApiClient,
+    api: Client,
     mp: MultiProgress,
 ) -> Result<()> {
     let path = &path_info.path;

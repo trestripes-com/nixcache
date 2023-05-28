@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+nixcache-common = { path = "../nixcache-common" }
 anyhow = "1.0.71"
 async-channel = "1.8.0"
 attic = { git = "https://github.com/zhaofengli/attic" }
