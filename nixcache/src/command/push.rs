@@ -17,9 +17,7 @@ use clap::Parser;
 use crate::api::Client;
 use crate::cli::Opts;
 use crate::config::Config;
-use attic::error::AtticResult;
-use attic::nix_store::{NixStore, StorePath, ValidPathInfo};
-use nixcache_common::nix_store::StorePathHash;
+use nixcache_common::{StorePathHash, NixStore, StorePath, ValidPathInfo};
 use nixcache_common::v1::upload_path::{Request, Response, ResponseKind};
 
 /// Push closures to a binary cache.
@@ -342,7 +340,7 @@ pub async fn upload_path(
         );
     let bar = mp.add(ProgressBar::new(path_info.nar_size));
     bar.set_style(style);
-    let nar_stream = NarStreamProgress::new(store.nar_from_path(path.to_owned()), bar.clone())
+    let nar_stream = NarStreamProgress::new(store.nar_from_path(path.to_owned()).map_err(Into::into), bar.clone())
         .map_ok(Bytes::from);
 
     let start = Instant::now();
@@ -362,10 +360,7 @@ pub async fn upload_path(
                     let elapsed = start.elapsed();
                     let seconds = elapsed.as_secs_f64();
                     let speed = (path_info.nar_size as f64 / seconds) as u64;
-
-                    let mut s = format!("{}/s", HumanBytes(speed));
-
-                    s
+                    format!("{}/s", HumanBytes(speed))
                 }
             };
 
@@ -390,14 +385,14 @@ pub async fn upload_path(
     }
 }
 
-impl<S: Stream<Item = AtticResult<Vec<u8>>>> NarStreamProgress<S> {
+impl<S: Stream<Item = Result<Vec<u8>>>> NarStreamProgress<S> {
     fn new(stream: S, bar: ProgressBar) -> Self {
         Self { stream, bar }
     }
 }
 
-impl<S: Stream<Item = AtticResult<Vec<u8>>> + Unpin> Stream for NarStreamProgress<S> {
-    type Item = AtticResult<Vec<u8>>;
+impl<S: Stream<Item = Result<Vec<u8>>> + Unpin> Stream for NarStreamProgress<S> {
+    type Item = Result<Vec<u8>>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match Pin::new(&mut self.stream).as_mut().poll_next(cx) {
