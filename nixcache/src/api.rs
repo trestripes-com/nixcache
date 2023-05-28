@@ -71,7 +71,7 @@ impl ApiClient {
         S: TryStream<Ok = Bytes> + Send + Sync + 'static,
         S::Error: Into<Box<dyn StdError + Send + Sync>> + Send + Sync,
     {
-        let endpoint = self.endpoint.join("api/v1/upload-path")?;
+        let endpoint = self.endpoint.join("_api/v1/upload-path")?;
         let upload_info_json = serde_json::to_string(&nar_info)?;
 
         let mut req = self

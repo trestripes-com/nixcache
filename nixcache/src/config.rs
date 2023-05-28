@@ -9,9 +9,6 @@ use xdg::BaseDirectories;
 /// This will be concatenated into `$XDG_CONFIG_HOME/nixcache`.
 const XDG_PREFIX: &str = "nixcache";
 
-/// The permission the configuration file should have.
-const FILE_MODE: u32 = 0o600;
-
 /// Client configuration.
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct Config {

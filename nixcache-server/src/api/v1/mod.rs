@@ -1,6 +1,6 @@
 pub mod upload_path;
 
-use axum::{Router, routing::{get, post, put, patch, delete}};
+use axum::{Router, routing::put};
 
 pub fn router() -> Router {
     Router::new()

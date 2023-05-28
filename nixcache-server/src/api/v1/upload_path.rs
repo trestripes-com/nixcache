@@ -65,7 +65,7 @@ struct CompressionStream {
 #[instrument(skip_all)]
 #[axum_macros::debug_handler]
 pub async fn upload_path(
-    Extension(state): Extension<State>,
+    Extension(state): Extension<Arc<State>>,
     headers: HeaderMap,
     stream: BodyStream,
 ) -> ServerResult<Json<UploadPathResult>> {
