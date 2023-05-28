@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use clap::Parser;
 use indicatif::MultiProgress;
 
+use crate::api::ApiClient;
 use crate::cli::Opts;
+use crate::config::Config;
 use attic::nix_store::NixStore;
 
 /// Push closures to a binary cache.
@@ -36,28 +38,16 @@ pub async fn run(opts: Opts) -> Result<()> {
         .map(|p| store.follow_store_path(p))
         .collect::<std::result::Result<Vec<_>, _>>()?;
 
-    let (server_name, server, cache) = config.resolve_cache(&sub.cache)?;
-
-    let mut api = ApiClient::from_server_config(server.clone())?;
-
-    // Confirm remote cache validity, query cache config
-    let cache_config = api.get_cache_config(cache).await?;
-
-    if let Some(api_endpoint) = &cache_config.api_endpoint {
-        // Use delegated API endpoint
-        api.set_endpoint(api_endpoint)?;
-    }
+    let mut api = ApiClient::from_server_config(config.server.clone())?;
 
     let push_config = PushConfig {
         num_workers: sub.jobs,
-        force_preamble: sub.force_preamble,
     };
 
     let mp = MultiProgress::new();
-
-    let pusher = Pusher::new(store, api, cache.to_owned(), cache_config, mp, push_config);
+    let pusher = Pusher::new(store, api, mp, push_config);
     let plan = pusher
-        .plan(roots, sub.no_closure, sub.ignore_upstream_cache_filter)
+        .plan(roots, sub.no_closure)
         .await?;
 
     if plan.store_path_map.is_empty() {
@@ -73,8 +63,7 @@ pub async fn run(opts: Opts) -> Result<()> {
 
         return Ok(());
     } else {
-        eprintln!("⚙️ Pushing {num_missing_paths} paths to \"{cache}\" on \"{server}\" ({num_already_cached} already cached, {num_upstream} in upstream)...",
-            cache = cache.as_str(),
+        eprintln!("⚙️ Pushing {num_missing_paths} paths \"{server}\" ({num_already_cached} already cached, {num_upstream} in upstream)...",
             server = server_name.as_str(),
             num_missing_paths = plan.store_path_map.len(),
             num_already_cached = plan.num_already_cached,

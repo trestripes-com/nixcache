@@ -1,5 +1,7 @@
 mod cli;
 mod command;
+mod config;
+mod api;
 
 use anyhow::Result;
 
