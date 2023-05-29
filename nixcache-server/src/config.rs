@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::path::Path;
 use std::net::SocketAddr;
 use std::fs::read_to_string;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use async_compression::Level as CompressionLevel;
 
 use crate::storage::local::LocalStorageConfig;
@@ -48,7 +48,7 @@ pub enum StorageConfig {
 }
 
 /// Compression configuration.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompressionConfig {
     /// Compression type.
     pub r#type: CompressionType,
@@ -81,7 +81,7 @@ impl CompressionConfig {
     }
 }
 /// Compression type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CompressionType {
     /// No compression.
     #[serde(rename = "none")]
@@ -144,5 +144,5 @@ pub struct ChunkingConfig {
 }
 
 fn default_listen_address() -> SocketAddr {
-    "0.0.0.0:8080".parse().unwrap()
+    "localhost:8080".parse().unwrap()
 }

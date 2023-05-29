@@ -16,6 +16,12 @@ pub struct LocalBackend {
 pub struct LocalStorageConfig {
     /// The directory to store all files under.
     path: PathBuf,
+    /// Dir name for chunks.
+    #[serde(default = "default_chunks_dir_name")]
+    chunks: String,
+    /// Dir name for NARs.
+    #[serde(default = "default_nars_dir_name")]
+    nars: String,
 }
 
 impl LocalBackend {
@@ -25,19 +31,18 @@ impl LocalBackend {
 
         Ok(Self { config })
     }
-    fn get_path(&self, p: &str) -> PathBuf {
-        self.config.path.join(p)
+    fn get_chunk_path(&self, p: &str) -> PathBuf {
+        self.config.path.join(&self.config.chunks).join(p)
     }
-}
-#[async_trait::async_trait]
-impl StorageBackend for LocalBackend {
-    async fn upload_file(
+    fn get_nar_path(&self, p: &str) -> PathBuf {
+        self.config.path.join(&self.config.nars).join(p)
+    }
+    async fn upload(
         &self,
-        name: String,
+        path: PathBuf,
         mut stream: &mut (dyn AsyncRead + Unpin + Send),
-    ) -> ServerResult<RemoteFile> {
-
-        let mut file = File::create(self.get_path(&name))
+    ) -> ServerResult<()> {
+        let mut file = File::create(path)
             .await
             .map_err(ServerError::storage_error)?;
 
@@ -45,6 +50,32 @@ impl StorageBackend for LocalBackend {
             .await
             .map_err(ServerError::storage_error)?;
 
-        Ok(RemoteFile { path: name })
+        Ok(())
     }
+}
+#[async_trait::async_trait]
+impl StorageBackend for LocalBackend {
+    async fn upload_chunk(
+        &self,
+        name: String,
+        stream: &mut (dyn AsyncRead + Unpin + Send),
+    ) -> ServerResult<RemoteFile> {
+        self.upload(self.get_chunk_path(&name), stream).await?;
+        Ok(RemoteFile::Chunk(name))
+    }
+    async fn upload_nar(
+        &self,
+        name: String,
+        stream: &mut (dyn AsyncRead + Unpin + Send),
+    ) -> ServerResult<RemoteFile> {
+        self.upload(self.get_nar_path(&name), stream).await?;
+        Ok(RemoteFile::Nar(name))
+    }
+}
+
+fn default_chunks_dir_name() -> String {
+    "chunks".to_string()
+}
+fn default_nars_dir_name() -> String {
+    "nars".to_string()
 }

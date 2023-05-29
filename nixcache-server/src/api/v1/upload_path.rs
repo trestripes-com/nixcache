@@ -25,6 +25,7 @@ use crate::error::{ErrorKind, ServerError, ServerResult};
 use crate::State;
 use crate::chunking::{chunk_stream, read_chunk_async};
 use crate::stream::StreamHasher;
+use crate::api::{UploadedChunk, UploadedNar};
 
 /// Number of chunks to upload to the storage backend at once.
 const CONCURRENT_CHUNK_UPLOADS: usize = 10;
@@ -33,13 +34,6 @@ const CONCURRENT_CHUNK_UPLOADS: usize = 10;
 const MAX_NAR_INFO_SIZE: usize = 1 * 1024 * 1024; // 1 MiB
 
 type CompressorFn<C> = Box<dyn FnOnce(C) -> Box<dyn AsyncRead + Unpin + Send> + Send>;
-
-struct UploadedChunk {
-    file_hash: Hash,
-    file_size: usize,
-    compression_type: CompressionType,
-    compression_level: CompressionLevel,
-}
 
 /// Applies compression to a stream, computing hashes along the way.
 ///
@@ -133,9 +127,7 @@ async fn upload_path_new(
     }
 }
 
-/// Uploads a path when there is no matching NAR in the global cache (unchunked).
-///
-/// We upload the entire NAR as a single chunk.
+/// Upload the entire NAR as a single chunk.
 async fn upload_path_new_unchunked(
     upload_info: Request,
     stream: impl AsyncRead + Send + Unpin + 'static,
@@ -170,35 +162,36 @@ async fn upload_path_new_unchunked(
 
     // Upload chunk
     let backend = state.storage();
+
     backend
-        .upload_file(file_hash.to_typed_base32(), &mut Cursor::new(read))
+        .upload_chunk(file_hash.to_typed_base32(), &mut Cursor::new(read))
         .await?;
 
-    let chunk = UploadedChunk {
+    let chunks = vec![UploadedChunk {
         file_hash,
         file_size: *file_size,
-        compression_type,
-        compression_level,
+        compression: compression_config.clone(),
+    }];
+
+    // Upload NAR
+    let nar = UploadedNar {
+        nar_size: *nar_size,
+        chunks,
     };
+    let data = serde_json::to_vec(&nar)
+        .map_err(ServerError::storage_error)?;
 
-    // TODO Create a NAR entry
-    //     let model = nar::ActiveModel {
-    //         nar_hash: Set(upload_info.nar_hash.to_typed_base16()),
-    //         nar_size: Set(chunk.guard.chunk_size),
-
-    //         num_chunks: Set(1),
-
-    //         created_at: Set(Utc::now()),
-    //         ..Default::default()
-    //     };
+    backend
+        .upload_nar(nar_hash.to_typed_base32(), &mut Cursor::new(data))
+        .await?;
 
     Ok(Json(Response {
         kind: ResponseKind::Uploaded,
-        file_size: Some(chunk.file_size),
+        file_size: Some(*file_size),
     }))
 }
 
-/// Uploads a path when there is no matching NAR in the global cache (chunked).
+/// Uploads chunked NAR.
 async fn upload_path_new_chunked(
     upload_info: Request,
     stream: impl AsyncRead + Send + Unpin + 'static,
@@ -221,7 +214,6 @@ async fn upload_path_new_chunked(
     let upload_chunk_limit = Arc::new(Semaphore::new(CONCURRENT_CHUNK_UPLOADS));
     let mut futures = Vec::new();
 
-    let mut chunk_idx = 0;
     while let Some(bytes) = chunks.next().await {
         let data = bytes.map_err(ServerError::request_error)?;
 
@@ -237,6 +229,7 @@ async fn upload_path_new_chunked(
             let mut stream = CompressionStream::new(Cursor::new(data), compressor);
             let buf = BytesMut::with_capacity(state.config.chunking.max_size);
 
+            let compression = compression_config.clone();
             spawn(async move {
                 let read = read_chunk_async(&mut stream.stream(), buf)
                     .await
@@ -248,22 +241,19 @@ async fn upload_path_new_chunked(
                 // Upload chunk
                 let backend = state.storage();
                 backend
-                    .upload_file(file_hash.to_typed_base32(), &mut Cursor::new(read))
+                    .upload_chunk(file_hash.to_typed_base32(), &mut Cursor::new(read))
                     .await?;
 
                 let chunk = UploadedChunk {
                     file_hash,
                     file_size: *file_size,
-                    compression_type,
-                    compression_level,
+                    compression,
                 };
 
                 drop(permit);
                 Ok(chunk)
             })
         });
-
-        chunk_idx += 1;
     }
 
     // Confirm that the NAR Hash and Size are correct
@@ -285,34 +275,18 @@ async fn upload_path_new_chunked(
         .iter()
         .fold(0, |file_size, chunk| file_size + chunk.file_size);
 
-    // let model = nar::ActiveModel {
-    //     compression: Set(compression.to_string()),
+    // Upload NAR
+    let nar = UploadedNar {
+        nar_size: *nar_size,
+        chunks,
+    };
+    let data = serde_json::to_vec(&nar)
+        .map_err(ServerError::storage_error)?;
 
-    //     nar_hash: Set(upload_info.nar_hash.to_typed_base16()),
-    //     nar_size: Set(nar_size_db),
-
-    //     num_chunks: Set(0),
-
-    //     created_at: Set(Utc::now()),
-    //     ..Default::default()
-    // };
-    // // Set num_chunks and mark the NAR as Valid
-    // Nar::update(nar::ActiveModel {
-        // id: Set(nar_id),
-        // state: Set(NarState::Valid),
-        // num_chunks: Set(chunks.len() as i32),
-        // ..Default::default()
-    // })
-
-    // // Create a mapping granting the local cache access to the NAR
-    // Object::insert({
-        // let mut new_object = upload_info.to_active_model();
-        // new_object.cache_id = Set(cache.id);
-        // new_object.nar_id = Set(nar_id);
-        // new_object.created_at = Set(Utc::now());
-        // new_object.created_by = Set(username);
-        // new_object
-    // })
+    let backend = state.storage();
+    backend
+        .upload_nar(nar_hash.to_typed_base32(), &mut Cursor::new(data))
+        .await?;
 
     Ok(Json(Response {
         kind: ResponseKind::Uploaded,
