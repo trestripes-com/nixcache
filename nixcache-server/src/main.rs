@@ -5,6 +5,7 @@ use nixcache_server::{run_api_server, config};
 #[tokio::main]
 async fn main() -> Result<()> {
     dump_version();
+    tracing_subscriber::fmt::init();
 
     let config = config::load().await?;
 

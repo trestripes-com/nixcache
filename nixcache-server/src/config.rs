@@ -12,15 +12,18 @@ const CONFIG_PATH: &str = "/trestripes/nixcache/config.toml";
 const LOCAL_CONFIG_PATH: &str = "./config.toml";
 
 pub async fn load() -> Result<Config> {
-    let data = if Path::new(LOCAL_CONFIG_PATH).is_file() {
-        read_to_string(Path::new(LOCAL_CONFIG_PATH)).unwrap()
+    if Path::new(LOCAL_CONFIG_PATH).is_file() {
+        let data = read_to_string(Path::new(LOCAL_CONFIG_PATH))?;
+        let config = toml::from_str(&data)?;
+        Ok(config)
+    } else if Path::new(CONFIG_PATH).is_file() {
+        let data = read_to_string(Path::new(CONFIG_PATH))?;
+        let config = toml::from_str(&data)?;
+        Ok(config)
     } else {
-        read_to_string(Path::new(CONFIG_PATH)).unwrap()
-    };
-
-    let config = toml::from_str(&data)?;
-
-    Ok(config)
+        eprintln!("No config found, using 'Config::default'.");
+        Ok(Config::default())
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -35,7 +38,18 @@ pub struct Config {
     #[serde(default = "Default::default")]
     pub compression: CompressionConfig,
     /// Data chunking.
+    #[serde(default = "Default::default")]
     pub chunking: ChunkingConfig,
+}
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            listen: default_listen_address(),
+            storage: StorageConfig::Local(Default::default()),
+            compression: Default::default(),
+            chunking: Default::default(),
+        }
+    }
 }
 
 /// File storage configuration.
@@ -56,6 +70,8 @@ pub struct CompressionConfig {
     /// Compression level.
     ///
     /// If unspecified, Attic will choose a default one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub level: Option<u32>,
 }
 impl Default for CompressionConfig {
@@ -142,7 +158,17 @@ pub struct ChunkingConfig {
     #[serde(rename = "max-size")]
     pub max_size: usize,
 }
+impl Default for ChunkingConfig {
+    fn default() -> Self {
+        Self {
+            nar_size_threshold: 65536,
+            min_size: 16384,
+            avg_size: 65536,
+            max_size: 262144,
+        }
+    }
+}
 
 fn default_listen_address() -> SocketAddr {
-    "localhost:8080".parse().unwrap()
+    "127.0.0.1:8080".parse().unwrap()
 }

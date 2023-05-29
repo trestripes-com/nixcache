@@ -23,10 +23,21 @@ pub struct LocalStorageConfig {
     #[serde(default = "default_nars_dir_name")]
     nars: String,
 }
+impl Default for LocalStorageConfig {
+    fn default() -> Self {
+        Self {
+            path: "/tmp/_nixcache".into(),
+            chunks: default_chunks_dir_name(),
+            nars: default_nars_dir_name(),
+        }
+    }
+}
 
 impl LocalBackend {
     pub async fn new(config: LocalStorageConfig) -> Result<Self> {
-        fs::create_dir_all(&config.path)
+        fs::create_dir_all(&config.path.join(&config.chunks))
+            .await?;
+        fs::create_dir_all(&config.path.join(&config.nars))
             .await?;
 
         Ok(Self { config })
