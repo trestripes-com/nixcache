@@ -8,10 +8,9 @@ use futures::{
 };
 use reqwest::{header::HeaderValue, Body, Client as HttpClient, Url};
 
+use common::v1::{header, upload_path};
 use crate::config::ServerConfig;
 use super::error::Error;
-use nixcache_common::v1::header;
-use nixcache_common::v1::upload_path;
 
 /// The User-Agent string.
 const USER_AGENT: &str = concatcp!("Nixcache {}", env!("CARGO_PKG_VERSION"));

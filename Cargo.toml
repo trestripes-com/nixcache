@@ -1,7 +1,8 @@
 [workspace]
 
 members = [
-  "nixcache-common",
-  "nixcache-server",
-  "nixcache",
+  "common",
+  "server",
+  "client",
+  "nixbase32",
 ]

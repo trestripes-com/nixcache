@@ -48,9 +48,9 @@ use serde::de;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
+use common::{mime, Hash, Keypair};
 use crate::error::{ErrorKind, ServerError, ServerResult};
 use crate::nix_manifest::{self, SpaceDelimitedList};
-use nixcache_common::{mime, Hash, Keypair};
 
 #[cfg(test)]
 mod tests;

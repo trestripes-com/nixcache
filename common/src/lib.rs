@@ -1,5 +1,4 @@
 pub mod v1;
-pub mod nix_base32;
 pub mod mime;
 pub mod signing;
 

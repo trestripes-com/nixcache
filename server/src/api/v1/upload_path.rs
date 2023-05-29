@@ -18,9 +18,9 @@ use tokio::task::spawn;
 use tokio_util::io::StreamReader;
 use tracing::instrument;
 
-use nixcache_common::Hash;
-use nixcache_common::v1::header;
-use nixcache_common::v1::upload_path::{Request, Response, ResponseKind};
+use common::Hash;
+use common::v1::header;
+use common::v1::upload_path::{Request, Response, ResponseKind};
 use crate::config::CompressionType;
 use crate::error::{ErrorKind, ServerError, ServerResult};
 use crate::State;

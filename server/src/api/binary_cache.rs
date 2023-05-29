@@ -21,8 +21,8 @@ use tokio_util::io::ReaderStream;
 use futures::stream::BoxStream;
 use tracing::instrument;
 
-use nixcache_common::{mime, Hash, StorePathHash};
-use nixcache_common::nix_base32::from_nix_base32;
+use nixbase32::from_nix_base32;
+use common::{mime, Hash, StorePathHash};
 use crate::error::{ErrorKind, ServerResult, ServerError};
 use crate::{nix_manifest, State, narinfo::NarInfo};
 use crate::storage::Download;

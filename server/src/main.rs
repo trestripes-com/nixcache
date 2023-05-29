@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use nixcache_server::{run_api_server, config};
+use server::{run_api_server, config};
 
 #[tokio::main]
 async fn main() -> Result<()> {

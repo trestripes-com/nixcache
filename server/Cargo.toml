@@ -1,12 +1,13 @@
 [package]
-name = "nixcache-server"
+name = "server"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nixcache-common = { path = "../nixcache-common" }
+common = { path = "../common" }
+nixbase32 = { path = "../nixbase32" }
 anyhow = "1.0.71"
 async-compression = { version = "0.4.0", features = ["zstd", "brotli", "xz", "tokio"] }
 async-stream = "0.3.5"
@@ -35,3 +36,7 @@ tracing-subscriber = "0.3.17"
 
 [dev-dependencies]
 tokio-test = "0.4.2"
+
+[[bin]]
+name = "nixcached"
+path = "src/main.rs"
