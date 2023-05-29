@@ -71,7 +71,6 @@ impl<R: AsyncRead + Unpin, D: Digest + Unpin> AsyncRead for StreamHasher<R, D> {
 mod tests {
     use super::*;
 
-    use async_stream::stream;
     use tokio::io::AsyncReadExt;
     use tokio_test::block_on;
 

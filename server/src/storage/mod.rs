@@ -23,6 +23,11 @@ pub trait StorageBackend: Send + Sync + std::fmt::Debug {
         name: String,
         stream: &mut (dyn AsyncRead + Unpin + Send),
     ) -> ServerResult<RemoteFile>;
+    /// Downloads a chunk.
+    async fn download_chunk(
+        &self,
+        name: String,
+    ) -> ServerResult<Download>;
 
     /// Uploads a NAR.
     async fn upload_nar(

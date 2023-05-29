@@ -5,13 +5,15 @@
 //! The implementation is based on the specifications at <https://github.com/fzakaria/nix-http-binary-cache-api-spec>.
 
 use anyhow::anyhow;
+use std::io::{Error as IoError, ErrorKind as IoErrorKind};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::collections::VecDeque;
 use axum::{
     body::StreamBody,
     extract::{Extension, Path},
     http::StatusCode,
-    response::{IntoResponse, Redirect, Response},
+    response::{IntoResponse, Response},
     routing::{get, head},
     Router,
 };
@@ -21,12 +23,12 @@ use tokio_util::io::ReaderStream;
 use futures::stream::BoxStream;
 use tracing::instrument;
 
-use nixbase32::from_nix_base32;
-use common::{mime, Hash, StorePathHash};
+use common::{mime, StorePathHash};
 use crate::error::{ErrorKind, ServerResult, ServerError};
 use crate::{nix_manifest, State, narinfo::NarInfo};
-use crate::storage::Download;
-use crate::api::UploadedNar;
+use crate::storage::{StorageBackend, Download};
+use crate::api::{UploadedNar, UploadedChunk};
+use crate::chunking::merge_chunks;
 
 /// Nix cache information.
 ///
@@ -96,7 +98,6 @@ async fn get_store_path_info(
     if components[1] != "narinfo" {
         return Err(ErrorKind::NotFound.into());
     }
-
     let store_path_hash = StorePathHash::new(components[0].to_string())
         .map_err(|e| ErrorKind::RequestError(anyhow!(
             "Could not parse store path hash : {}", e
@@ -128,10 +129,94 @@ async fn get_store_path_info(
     Ok(narinfo)
 }
 
+/// Gets a NAR.
+///
+/// - GET `:cache/nar/{storePathHash}.nar`
+///
+/// Here we use the store path hash not the NAR hash or file hash
+/// for better logging. In reality, the files are deduplicated by
+/// content-addressing.
+#[instrument(skip_all, fields(cache_name, path))]
+async fn get_nar(
+    Extension(state): Extension<Arc<State>>,
+    Path(path): Path<String>,
+) -> ServerResult<Response> {
+    let components: Vec<&str> = path.splitn(2, '.').collect();
+    if components.len() != 2 {
+        return Err(ErrorKind::NotFound.into());
+    }
+    if components[1] != "nar" {
+        return Err(ErrorKind::NotFound.into());
+    }
+    let store_path_hash = StorePathHash::new(components[0].to_string())
+        .map_err(|e| ErrorKind::RequestError(anyhow!(
+            "Could not parse store path hash : {}", e
+        )))?;
+
+    tracing::debug!("Received request for {}.nar", store_path_hash.as_str());
+
+    // Get NAR
+    let backend = state.storage();
+
+    let nar = backend
+        .download_nar(store_path_hash.to_string())
+        .await?;
+
+    let nar: UploadedNar = match nar {
+        Download::AsyncRead(mut stream) => {
+            let mut nar = Vec::new();
+            stream.read_to_end(&mut nar).await
+                .map_err(ServerError::storage_error)?;
+            serde_json::from_slice(&nar)
+                .map_err(ServerError::storage_error)?
+        },
+    };
+
+    // Stream merged chunks
+    if nar.chunks.len() == 1 {
+        // single chunk
+        let chunk = &nar.chunks[0];
+        match backend.download_chunk(chunk.file_hash.to_typed_base32()).await? {
+            Download::AsyncRead(stream) => {
+                let stream = ReaderStream::new(stream);
+                let body = StreamBody::new(stream);
+                Ok(body.into_response())
+            }
+        }
+    } else {
+        // reassemble NAR
+
+        fn io_error<E: std::error::Error + Send + Sync + 'static>(e: E) -> IoError {
+            IoError::new(IoErrorKind::Other, e)
+        }
+
+        let streamer = |chunk: UploadedChunk, storage: Arc<Box<dyn StorageBackend + 'static>>| async move {
+            match storage
+                .download_chunk(chunk.file_hash.to_typed_base32())
+                .await
+                .map_err(io_error)?
+            {
+                Download::AsyncRead(stream) => {
+                    let stream: BoxStream<_> = Box::pin(ReaderStream::new(stream));
+                    Ok(stream)
+                }
+            }
+        };
+
+        let chunks: VecDeque<_> = nar.chunks.into();
+
+        // TODO: Make num_prefetch configurable
+        // The ideal size depends on the average chunk size
+        let merged = merge_chunks(chunks, streamer, backend, 2);
+        let body = StreamBody::new(merged);
+        Ok(body.into_response())
+    }
+}
+
 pub fn router() -> Router {
     Router::new()
         .route("/nix-cache-info", get(get_nix_cache_info))
-        .route("/:path", get(get_store_path_info))
         .route("/:path", head(get_store_path_info))
-        // .route("/nar/:path", get(get_nar))
+        .route("/:path", get(get_store_path_info))
+        .route("/nar/:path", get(get_nar))
 }

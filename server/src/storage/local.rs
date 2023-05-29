@@ -82,6 +82,16 @@ impl StorageBackend for LocalBackend {
         self.upload(self.get_nar_path(&name), stream).await?;
         Ok(RemoteFile::Nar(name))
     }
+    async fn download_chunk(
+        &self,
+        name: String,
+    ) -> ServerResult<Download> {
+        let file = File::open(self.get_chunk_path(&name))
+            .await
+            .map_err(ServerError::storage_error)?;
+
+        Ok(Download::AsyncRead(Box::new(file)))
+    }
     async fn download_nar(
         &self,
         name: String,

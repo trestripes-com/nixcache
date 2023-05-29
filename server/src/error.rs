@@ -91,6 +91,7 @@ impl fmt::Display for ServerError {
         Ok(())
     }
 }
+impl StdError for ServerError {}
 impl From<ErrorKind> for ServerError {
     fn from(kind: ErrorKind) -> Self {
         Self {
