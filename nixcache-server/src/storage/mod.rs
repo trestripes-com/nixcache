@@ -10,6 +10,11 @@ pub enum RemoteFile {
     Nar(String),
 }
 
+/// Way to download a file.
+pub enum Download {
+    AsyncRead(Box<dyn AsyncRead + Unpin + Send>),
+}
+
 #[async_trait::async_trait]
 pub trait StorageBackend: Send + Sync + std::fmt::Debug {
     /// Uploads a chunk.
@@ -25,4 +30,9 @@ pub trait StorageBackend: Send + Sync + std::fmt::Debug {
         name: String,
         stream: &mut (dyn AsyncRead + Unpin + Send),
     ) -> ServerResult<RemoteFile>;
+    /// Downloads a NAR.
+    async fn download_nar(
+        &self,
+        name: String,
+    ) -> ServerResult<Download>;
 }

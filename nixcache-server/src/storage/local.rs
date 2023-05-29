@@ -5,7 +5,7 @@ use tokio::io::{self, AsyncRead};
 use tokio::fs::{self, File};
 
 use crate::error::{ServerError, ServerResult};
-use super::{StorageBackend, RemoteFile};
+use super::{StorageBackend, RemoteFile, Download};
 
 #[derive(Debug)]
 pub struct LocalBackend {
@@ -81,6 +81,16 @@ impl StorageBackend for LocalBackend {
     ) -> ServerResult<RemoteFile> {
         self.upload(self.get_nar_path(&name), stream).await?;
         Ok(RemoteFile::Nar(name))
+    }
+    async fn download_nar(
+        &self,
+        name: String,
+    ) -> ServerResult<Download> {
+        let file = File::open(self.get_nar_path(&name))
+            .await
+            .map_err(ServerError::storage_error)?;
+
+        Ok(Download::AsyncRead(Box::new(file)))
     }
 }
 

@@ -2,6 +2,7 @@ use std::io;
 use std::io::Cursor;
 use std::marker::Unpin;
 use std::sync::Arc;
+use std::path::PathBuf;
 use anyhow::anyhow;
 use async_compression::tokio::bufread::{BrotliEncoder, XzEncoder, ZstdEncoder};
 use async_compression::Level as CompressionLevel;
@@ -109,10 +110,6 @@ pub async fn upload_path(
 }
 
 /// Uploads a path when there is no matching NAR in the global cache.
-///
-/// It's okay if some other client races to upload the same NAR before
-/// us. The `nar` table can hold duplicate NARs which can be deduplicated
-/// in a background process.
 async fn upload_path_new(
     upload_info: Request,
     stream: impl AsyncRead + Send + Unpin + 'static,
@@ -175,14 +172,19 @@ async fn upload_path_new_unchunked(
 
     // Upload NAR
     let nar = UploadedNar {
+        nar_hash,
         nar_size: *nar_size,
         chunks,
+        ca: upload_info.ca,
+        references: upload_info.references,
+        store_path: PathBuf::from(upload_info.store_path),
+        system: upload_info.system,
     };
     let data = serde_json::to_vec(&nar)
         .map_err(ServerError::storage_error)?;
 
     backend
-        .upload_nar(nar_hash.to_typed_base32(), &mut Cursor::new(data))
+        .upload_nar(upload_info.store_path_hash.to_string(), &mut Cursor::new(data))
         .await?;
 
     Ok(Json(Response {
@@ -277,15 +279,20 @@ async fn upload_path_new_chunked(
 
     // Upload NAR
     let nar = UploadedNar {
+        nar_hash,
         nar_size: *nar_size,
         chunks,
+        ca: upload_info.ca,
+        references: upload_info.references,
+        store_path: PathBuf::from(upload_info.store_path),
+        system: upload_info.system,
     };
     let data = serde_json::to_vec(&nar)
         .map_err(ServerError::storage_error)?;
 
     let backend = state.storage();
     backend
-        .upload_nar(nar_hash.to_typed_base32(), &mut Cursor::new(data))
+        .upload_nar(upload_info.store_path_hash.to_string(), &mut Cursor::new(data))
         .await?;
 
     Ok(Json(Response {
