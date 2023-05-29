@@ -27,22 +27,20 @@
           rust-overlay.overlays.default
         ];
       };
-      custom-rust = pkgs.rust-bin.stable.latest.default.override {
-        extensions = [ "rust-src" ];
-        targets = [ "x86_64-unknown-linux-gnu" ];
-      };
-
     in {
-      devShell = pkgs.mkShell {
+      packages = { inherit (pkgs.callPackage ./package.nix {})
+        nixcache nixcached default;
+      };
+      devShells.default = pkgs.mkShell {
         buildInputs = with pkgs; [
           git
           rust-analyzer
           cargo-edit
 
-          custom-rust
+          rust-bin.stable.latest.default
           gcc
           pkg-config
-          nixVersions.nix_2_10
+          nix
           boost
           libclang.lib
           rustPlatform.bindgenHook
