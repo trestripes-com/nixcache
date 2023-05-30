@@ -1,8 +1,5 @@
 //! Hashing utilities.
 
-#[cfg(test)]
-mod tests;
-
 use displaydoc::Display;
 use serde::{de, ser, Deserialize, Serialize};
 use sha2::{Digest, Sha256};

@@ -1,14 +1,14 @@
-use super::*;
+mod test_nar;
 
 use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::process::Command;
-
+use std::path::PathBuf;
 use serde::de::DeserializeOwned;
 use tokio_test::block_on;
 
-pub mod test_nar;
+use libnixstore::{NixStore, StorePath, StorePathHash, Error, to_base_name};
 
 fn connect() -> NixStore {
     NixStore::connect().expect("Failed to connect to the Nix store")
@@ -45,7 +45,7 @@ fn assert_base_name(store: &str, path: &str, expected: &str) {
 fn assert_base_name_err(store: &str, path: &str, err: &str) {
     let e = to_base_name(store.as_ref(), path.as_ref()).unwrap_err();
 
-    if let AtticError::InvalidStorePath { path: _, reason } = e {
+    if let Error::InvalidStorePath { path: _, reason } = e {
         assert!(reason.contains(err));
     } else {
         panic!("to_base_name didn't return an InvalidStorePath");

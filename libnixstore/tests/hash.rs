@@ -1,7 +1,4 @@
-use super::*;
-
-use crate::error::AtticError;
-use crate::nix_store::tests::test_nar;
+use libnixstore::{Error, Hash, hash};
 
 const BLOB: &[u8] = include_bytes!("blob");
 
@@ -18,8 +15,8 @@ fn test_basic() {
 
 #[test]
 fn test_nar_hash() {
-    let nar = test_nar::NO_DEPS;
-    let hash = Hash::sha256_from_bytes(nar.nar());
+    let nar = include_bytes!("nar/nm1w9sdm6j6icmhd2q3260hl1w9zj6li-attic-test-no-deps.nar");
+    let hash = Hash::sha256_from_bytes(nar);
 
     let expected_base32 = "sha256:0hjszid30ak3rkzvc3m94c3risg8wz2hayy100c1fg92bjvvvsms";
     assert_eq!(expected_base32, hash.to_typed_base32());
@@ -37,26 +34,26 @@ fn test_from_typed() {
 
     assert!(matches!(
         Hash::from_typed("sha256"),
-        Err(AtticError::HashError(Error::NoColonSeparator))
+        Err(Error::HashError(hash::Error::NoColonSeparator))
     ));
 
     assert!(matches!(
         Hash::from_typed("sha256:"),
-        Err(AtticError::HashError(Error::InvalidHashStringLength { .. }))
+        Err(Error::HashError(hash::Error::InvalidHashStringLength { .. }))
     ));
 
     assert!(matches!(
         Hash::from_typed("sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),
-        Err(AtticError::HashError(Error::InvalidBase32Hash))
+        Err(Error::HashError(hash::Error::InvalidBase32Hash))
     ));
 
     assert!(matches!(
         Hash::from_typed("sha256:gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"),
-        Err(AtticError::HashError(Error::InvalidBase16Hash(_)))
+        Err(Error::HashError(hash::Error::InvalidBase16Hash(_)))
     ));
 
     assert!(matches!(
         Hash::from_typed("md5:invalid"),
-        Err(AtticError::HashError(Error::UnsupportedHashAlgorithm(alg))) if alg == "md5"
+        Err(Error::HashError(hash::Error::UnsupportedHashAlgorithm(alg))) if alg == "md5"
     ));
 }

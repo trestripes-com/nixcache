@@ -148,7 +148,7 @@ pub struct ValidPathInfo {
 
 impl StorePath {
     /// Creates a StorePath with a base name.
-    fn from_base_name(base_name: PathBuf) -> Result<Self> {
+    pub fn from_base_name(base_name: PathBuf) -> Result<Self> {
         let s = base_name
             .as_os_str()
             .to_str()
@@ -265,7 +265,7 @@ impl<'de> Deserialize<'de> for StorePathHash {
 }
 
 /// Returns the base store name of a path relative to a store root.
-fn to_base_name(store_dir: &Path, path: &Path) -> Result<PathBuf> {
+pub fn to_base_name(store_dir: &Path, path: &Path) -> Result<PathBuf> {
     if let Ok(remaining) = path.strip_prefix(store_dir) {
         let first = remaining
             .iter()
