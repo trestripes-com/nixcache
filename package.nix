@@ -12,10 +12,6 @@ builder = rustPlatform.buildRustPackage {
   src = ./.;
   cargoLock = {
     lockFile = ./Cargo.lock;
-    outputHashes = {
-      "attic-0.1.0" = "sha256-9L+OZeU3bcNZ55mhMINBxnqskbaEU0mhiZIMhkEtNl0=";
-      "nix-base32-0.1.2-alpha.0" = "sha256-wtPWGOamy3+ViEzCxMSwBcoR4HMMD0t8eyLwXfCDFdo=";
-    };
   };
 
   nativeBuildInputs = [

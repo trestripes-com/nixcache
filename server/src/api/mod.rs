@@ -6,7 +6,7 @@ use axum::{routing::get, Router};
 use serde::{Serialize, Deserialize};
 use serde_with::serde_as;
 
-use common::{Hash, StorePathHash};
+use libnixstore::{Hash, StorePathHash};
 use crate::config::CompressionConfig;
 use crate::narinfo::{self, NarInfo};
 use crate::nix_manifest::SpaceDelimitedList;

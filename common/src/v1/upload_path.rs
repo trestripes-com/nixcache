@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DefaultOnError};
 
-use crate::{StorePathHash, Hash};
+use libnixstore::{StorePathHash, Hash};
 
 /// NAR information associated with a upload.
 ///

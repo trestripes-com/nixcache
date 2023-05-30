@@ -41,14 +41,14 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::ToString;
-
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::de;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
-use common::{mime, Hash, Keypair};
+use libnixstore::Hash;
+use common::{mime, Keypair};
 use crate::error::{ErrorKind, ServerError, ServerResult};
 use crate::nix_manifest::{self, SpaceDelimitedList};
 

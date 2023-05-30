@@ -14,7 +14,7 @@ use indicatif::{MultiProgress, HumanBytes, ProgressBar, ProgressState, ProgressS
 use tokio::task::{spawn, JoinHandle};
 use clap::Parser;
 
-use common::{StorePathHash, NixStore, StorePath, ValidPathInfo};
+use libnixstore::{StorePathHash, NixStore, StorePath, ValidPathInfo};
 use common::v1::upload_path::{Request, Response, ResponseKind};
 use crate::api::Client;
 use crate::cli::Opts;

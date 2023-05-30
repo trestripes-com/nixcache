@@ -18,7 +18,7 @@ use tokio::task::spawn;
 use tokio_util::io::StreamReader;
 use tracing::instrument;
 
-use common::Hash;
+use libnixstore::Hash;
 use common::v1::header;
 use common::v1::upload_path::{Request, Response, ResponseKind};
 use crate::config::CompressionType;

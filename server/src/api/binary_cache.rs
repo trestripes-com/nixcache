@@ -23,7 +23,8 @@ use tokio_util::io::ReaderStream;
 use futures::stream::BoxStream;
 use tracing::instrument;
 
-use common::{mime, StorePathHash};
+use libnixstore::StorePathHash;
+use common::mime;
 use crate::error::{ErrorKind, ServerResult, ServerError};
 use crate::{nix_manifest, State, narinfo::NarInfo};
 use crate::storage::{StorageBackend, Download};
