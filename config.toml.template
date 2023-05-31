@@ -1,0 +1,15 @@
+listen = "127.0.0.1:8080"
+
+# Signing keypair.
+#
+# Generate using: `nix key generate-secret --key-name test.nixcache-0`.
+#
+# The mandatory argument --key-name specifies a key name (such as test.nixcache-0).
+# It is used to look up keys on the client when it verifies signatures.
+# It can be anything, but it’s suggested to use the host name of your cache (e.g. cache.example.org)
+# with a suffix denoting the number of the key (to be incremented every time you need to revoke a key).
+signing_key = "test.nixcache-0:pcSJR7QTVSAyx1jcMbGvHYfljUboVn7mw3qWheyx9ySXLWZAZMJYGS8JPAfD8SinuaHtawM4HvbpG+A9z+0laA=="
+
+[storage]
+type = "local"
+path = "/tmp/_nixcache"

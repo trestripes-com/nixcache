@@ -27,7 +27,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, DecodeError, 
 use displaydoc::Display;
 
 /// An ed25519 keypair for signing.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Keypair {
     /// Name of this key.
     name: String,

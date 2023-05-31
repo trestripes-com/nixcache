@@ -112,7 +112,7 @@ async fn get_store_path_info(
         .download_nar(store_path_hash.to_string())
         .await?;
 
-    let narinfo = match nar {
+    let mut narinfo = match nar {
         Download::AsyncRead(mut stream) => {
             let mut nar = Vec::new();
             stream.read_to_end(&mut nar).await
@@ -123,9 +123,9 @@ async fn get_store_path_info(
         },
     };
 
-    // if narinfo.signature().is_none() {
-    //     narinfo.sign(&keypair);
-    // }
+    if narinfo.signature().is_none() {
+        narinfo.sign(&state.config.keypair);
+    }
 
     Ok(narinfo)
 }

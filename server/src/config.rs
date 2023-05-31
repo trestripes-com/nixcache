@@ -1,34 +1,54 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use std::path::Path;
 use std::net::SocketAddr;
 use std::fs::read_to_string;
 use serde::{Serialize, Deserialize};
 use async_compression::Level as CompressionLevel;
 
+use common::signing::Keypair;
 use crate::storage::local::LocalStorageConfig;
 use crate::narinfo::Compression as NixCompression;
 
-const CONFIG_PATH: &str = "/trestripes/nixcache/config.toml";
-const LOCAL_CONFIG_PATH: &str = "./config.toml";
+#[derive(Debug, Clone)]
+pub struct Config {
+    /// Socket address to listen on.
+    pub listen: SocketAddr,
+    /// Storage.
+    pub storage: StorageConfig,
+    /// Compression.
+    pub compression: CompressionConfig,
+    /// Data chunking.
+    pub chunking: ChunkingConfig,
+    /// Signing keypair.
+    pub keypair: Keypair,
+}
+impl TryFrom<ConfigInfo> for Config {
+    type Error = anyhow::Error;
+    fn try_from(config: ConfigInfo) -> Result<Self> {
+        Ok(Self {
+            listen: config.listen,
+            storage: config.storage,
+            compression: config.compression,
+            chunking: config.chunking,
+            keypair: Keypair::from_str(&config.keypair)?,
+        })
+    }
+}
 
-pub async fn load() -> Result<Config> {
-    if Path::new(LOCAL_CONFIG_PATH).is_file() {
-        let data = read_to_string(Path::new(LOCAL_CONFIG_PATH))?;
-        let config = toml::from_str(&data)?;
-        Ok(config)
-    } else if Path::new(CONFIG_PATH).is_file() {
-        let data = read_to_string(Path::new(CONFIG_PATH))?;
-        let config = toml::from_str(&data)?;
-        Ok(config)
+pub async fn load(path: &Path) -> Result<Config> {
+    eprintln!("Using config at: '{}'", path.to_string_lossy());
+    if path.is_file() {
+        let data = read_to_string(path)?;
+        let config: ConfigInfo = toml::from_str(&data)?;
+        config.try_into()
     } else {
-        eprintln!("No config found, using 'Config::default'.");
-        Ok(Config::default())
+        Err(anyhow!("No config found."))
     }
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Config {
+pub struct ConfigInfo {
     /// Socket address to listen on.
     #[serde(default = "default_listen_address")]
     pub listen: SocketAddr,
@@ -40,16 +60,9 @@ pub struct Config {
     /// Data chunking.
     #[serde(default = "Default::default")]
     pub chunking: ChunkingConfig,
-}
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            listen: default_listen_address(),
-            storage: StorageConfig::Local(Default::default()),
-            compression: Default::default(),
-            chunking: Default::default(),
-        }
-    }
+    /// Signing keypair.
+    #[serde(rename = "signing_key")]
+    pub keypair: String,
 }
 
 /// File storage configuration.
@@ -122,6 +135,7 @@ impl From<CompressionType> for NixCompression {
         }
     }
 }
+
 /// Data chunking.
 ///
 /// This must be set, but a default set of values is provided

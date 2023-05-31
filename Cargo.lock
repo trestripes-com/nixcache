@@ -1636,6 +1636,7 @@ dependencies = [
  "axum",
  "axum-macros",
  "bytes",
+ "clap",
  "common",
  "digest",
  "displaydoc",

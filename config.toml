@@ -1,5 +1,0 @@
-listen = "127.0.0.1:8080"
-
-[storage]
-type = "local"
-path = "/tmp/_nixcache"
