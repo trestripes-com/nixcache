@@ -34,12 +34,12 @@ pub struct Push {
 }
 
 pub async fn run(opts: Opts) -> Result<()> {
-    let sub = opts.command.as_push().unwrap();
+    let sub: &Push = opts.command.as_push().unwrap();
     if sub.jobs == 0 {
         return Err(anyhow!("The number of jobs cannot be 0"));
     }
 
-    let config = Config::load()?;
+    let config = Config::load(opts.config)?;
 
     let store = Arc::new(NixStore::connect()?);
     let roots = sub
@@ -49,7 +49,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .map(|p| store.follow_store_path(p))
         .collect::<std::result::Result<Vec<_>, _>>()?;
 
-    let api = Client::from_server_config(config.server.clone())?;
+    let api = Client::from_server_config(config.data.server.clone())?;
 
     let push_config = PushConfig {
         num_workers: sub.jobs,
@@ -73,7 +73,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         return Ok(());
     } else {
         eprintln!("⚙️ Pushing {num_missing_paths} paths \"{server}\" ...",
-            server = config.server.endpoint,
+            server = config.data.server.endpoint,
             num_missing_paths = plan.store_path_map.len(),
         );
     }
