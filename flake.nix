@@ -29,7 +29,7 @@
       };
     in {
       packages = { inherit (pkgs.callPackage ./package.nix {})
-        nixcache nixcached default;
+        nixcache demo default;
       };
       devShells.default = pkgs.mkShell {
         buildInputs = with pkgs; [
