@@ -36,6 +36,7 @@
           git
           rust-analyzer
           cargo-edit
+          cargo-machete
 
           rust-bin.stable.latest.default
           gcc

@@ -439,15 +439,10 @@ dependencies = [
  "base64",
  "displaydoc",
  "ed25519-compact",
- "hex",
- "lazy_static",
  "libnixstore",
- "regex",
  "serde",
  "serde_json",
  "serde_with",
- "sha2",
- "tokio",
 ]
 
 [[package]]
@@ -1646,7 +1641,6 @@ dependencies = [
  "hex",
  "itoa",
  "libnixstore",
- "nixbase32",
  "ryu",
  "serde",
  "serde_json",
