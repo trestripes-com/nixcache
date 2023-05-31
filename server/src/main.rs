@@ -4,15 +4,13 @@ use clap::Parser;
 
 use server::{run_api_server, config};
 
-const CONFIG_PATH: &str = "/trestripes/nixcache/config.toml";
-
 /// Nixcached - nixcache server.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
     /// Path to the 'config.toml'.
-    #[arg(short, long, default_value_t = CONFIG_PATH.to_string())]
-    config: String,
+    #[arg(short, long)]
+    config: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -22,7 +20,7 @@ async fn main() -> Result<()> {
     dump_version();
     tracing_subscriber::fmt::init();
 
-    let config = config::load(&PathBuf::from(args.config)).await?;
+    let config = config::load(args.config).await?;
 
     run_api_server(config).await?;
 

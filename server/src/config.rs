@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use std::path::Path;
+use std::path::PathBuf;
 use std::net::SocketAddr;
 use std::fs::read_to_string;
 use serde::{Serialize, Deserialize};
@@ -8,6 +8,8 @@ use async_compression::Level as CompressionLevel;
 use common::signing::Keypair;
 use crate::storage::local::LocalStorageConfig;
 use crate::narinfo::Compression as NixCompression;
+
+const CONFIG_PATH: &str = "/trestripes/nixcache/config.toml";
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -35,8 +37,14 @@ impl TryFrom<ConfigInfo> for Config {
     }
 }
 
-pub async fn load(path: &Path) -> Result<Config> {
+pub async fn load(path: Option<PathBuf>) -> Result<Config> {
+    let path = match path {
+        Some(path) => path,
+        None => PathBuf::from(CONFIG_PATH),
+    };
+
     eprintln!("Using config at: '{}'", path.to_string_lossy());
+
     if path.is_file() {
         let data = read_to_string(path)?;
         let config: ConfigInfo = toml::from_str(&data)?;
