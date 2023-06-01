@@ -89,10 +89,14 @@ pub struct ConfigData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
     pub endpoint: String,
+    pub token: Option<String>,
 }
 impl Default for ServerConfig {
     fn default() -> Self {
-        Self { endpoint: "http://localhost:8080".to_string() }
+        Self {
+            endpoint: "http://localhost:8080".to_string(),
+            token: None,
+        }
     }
 }
 

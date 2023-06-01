@@ -23,6 +23,8 @@ const NAR_INFO_PREAMBLE_THRESHOLD: usize = 4 * 1024; // 4 KiB
 pub struct Client {
     /// Base endpoint of the server.
     endpoint: Url,
+    /// Auth token.
+    token: Option<String>,
     /// An initialized HTTP client.
     client: HttpClient,
 }
@@ -30,13 +32,16 @@ pub struct Client {
 impl Client {
     pub fn from_server_config(config: ServerConfig) -> Result<Self> {
         let client = reqwest::Client::builder()
+            .user_agent(USER_AGENT)
             .build()?;
 
         Ok(Self {
             endpoint: Url::parse(&config.endpoint)?,
+            token: config.token,
             client,
         })
     }
+
     /// Uploads a path.
     pub async fn upload_path<S>(
         &self,
@@ -51,10 +56,11 @@ impl Client {
         let endpoint = self.endpoint.join("_api/v1/upload-path")?;
         let upload_info_json = serde_json::to_string(&nar_info)?;
 
-        let mut req = self
-            .client
-            .put(endpoint)
-            .header(reqwest::header::USER_AGENT, HeaderValue::from_str(USER_AGENT)?);
+        let mut req = self.client
+            .put(endpoint);
+        if let Some(token) = &self.token {
+            req = req.bearer_auth(token);
+        }
 
         if force_preamble || upload_info_json.len() >= NAR_INFO_PREAMBLE_THRESHOLD {
             let preamble = Bytes::from(upload_info_json);
