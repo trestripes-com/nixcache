@@ -141,7 +141,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
         let line = self.peek_until_eol()?;
         let colon = line.find(':').ok_or_else(|| {
-            eprintln!("Current input: {:?}", self.input);
+            tracing::debug!("Current input: {:?}", self.input);
             Error::ExpectedColon
         })?;
 

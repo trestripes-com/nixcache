@@ -6,16 +6,18 @@ pub mod chunking;
 pub mod narinfo;
 pub mod nix_manifest;
 pub mod stream;
+pub mod access;
 
 use anyhow::Result;
 use std::sync::Arc;
-use axum::{Server, Router, extract::Extension, http::Uri};
+use axum::{routing::get, Server, Router, extract::Extension, http::Uri};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::config::{Config, StorageConfig};
 use crate::error::{ErrorKind, ServerResult};
 use crate::storage::{StorageBackend, local::LocalBackend};
+use crate::access::apply_auth;
 
 /// Global server state.
 #[derive(Debug, Clone)]
@@ -48,7 +50,11 @@ impl State {
 
 /// Runs the API server.
 pub async fn run_api_server(config: Config) -> Result<()> {
-    eprintln!("Starting API server...");
+    tracing::info!("Starting API server...");
+
+    if config.token_hs256_secret.is_none() {
+        tracing::warn!("Authentication is disabled, anyone will be able to access this cache.");
+    }
 
     let listen = config.listen;
     let state = State::new(config).await?;
@@ -56,14 +62,21 @@ pub async fn run_api_server(config: Config) -> Result<()> {
     let rest = Router::new()
         .merge(api::router())
         .fallback(fallback)
+        .layer(axum::middleware::from_fn(apply_auth))
+        .route("/", get(home))
         .layer(Extension(state))
         .layer(TraceLayer::new_for_http())
         .layer(CatchPanicLayer::new());
 
-    eprintln!("Listening on {:?}...", listen);
+    tracing::info!("Listening on {:?}...", listen);
     Server::bind(&listen).serve(rest.into_make_service()).await?;
 
     Ok(())
+}
+
+/// The home route.
+async fn home() -> String {
+    format!("Nixcache {}", env!("CARGO_PKG_VERSION"))
 }
 
 /// The fallback route.

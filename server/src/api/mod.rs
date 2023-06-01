@@ -2,7 +2,7 @@ pub mod binary_cache;
 pub mod v1;
 
 use std::path::PathBuf;
-use axum::{routing::get, Router};
+use axum::Router;
 use serde::{Serialize, Deserialize};
 use serde_with::serde_as;
 
@@ -10,6 +10,15 @@ use libnixstore::{Hash, StorePathHash};
 use crate::config::CompressionConfig;
 use crate::narinfo::{self, NarInfo};
 use crate::nix_manifest::SpaceDelimitedList;
+
+/// The main application router.
+pub fn router() -> Router {
+    Router::new()
+        .merge(binary_cache::router())
+        .nest("/_api", Router::new()
+            .nest("/v1", v1::router())
+        )
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct UploadedChunk {
@@ -79,15 +88,4 @@ impl UploadedNar {
             ca: self.ca,
         }
     }
-}
-
-async fn home() -> String {
-    format!("Nix cache {}", env!("CARGO_PKG_VERSION"))
-}
-
-pub fn router() -> Router {
-    Router::new()
-        .route("/", get(home))
-        .merge(binary_cache::router())
-        .nest("/_api", Router::new().nest("/v1", v1::router()))
 }

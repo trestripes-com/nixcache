@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
 
 fn dump_version() {
     #[cfg(debug_assertions)]
-    eprintln!("Nixcache {} (debug)", env!("CARGO_PKG_VERSION"));
+    tracing::info!("Nixcache {} (debug)", env!("CARGO_PKG_VERSION"));
     #[cfg(not(debug_assertions))]
-    eprintln!("Nixcache {} (release)", env!("CARGO_PKG_VERSION"));
+    tracing::info!("Nixcache {} (release)", env!("CARGO_PKG_VERSION"));
 }

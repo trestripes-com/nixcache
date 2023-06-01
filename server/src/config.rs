@@ -6,6 +6,7 @@ use serde::{Serialize, Deserialize};
 use async_compression::Level as CompressionLevel;
 
 use common::signing::Keypair;
+use auth::{HS256Key, decode_token_hs256_secret_base64};
 use crate::storage::local::LocalStorageConfig;
 use crate::narinfo::Compression as NixCompression;
 
@@ -15,6 +16,8 @@ const CONFIG_PATH: &str = "/trestripes/nixcache/config.toml";
 pub struct Config {
     /// Socket address to listen on.
     pub listen: SocketAddr,
+    /// JSON Web Token HMAC secret.
+    pub token_hs256_secret: Option<HS256Key>,
     /// Storage.
     pub storage: StorageConfig,
     /// Compression.
@@ -27,8 +30,12 @@ pub struct Config {
 impl TryFrom<ConfigInfo> for Config {
     type Error = anyhow::Error;
     fn try_from(config: ConfigInfo) -> Result<Self> {
+        let token_hs256_secret = config.token_hs256_secret
+            .map(|x| decode_token_hs256_secret_base64(&x)).transpose()?;
+
         Ok(Self {
             listen: config.listen,
+            token_hs256_secret,
             storage: config.storage,
             compression: config.compression,
             chunking: config.chunking,
@@ -43,7 +50,7 @@ pub async fn load(path: Option<PathBuf>) -> Result<Config> {
         None => PathBuf::from(CONFIG_PATH),
     };
 
-    eprintln!("Using config at: '{}'", path.to_string_lossy());
+    tracing::info!("Using config at: '{}'", path.to_string_lossy());
 
     if path.is_file() {
         let data = read_to_string(path)?;
@@ -60,14 +67,24 @@ pub struct ConfigInfo {
     /// Socket address to listen on.
     #[serde(default = "default_listen_address")]
     pub listen: SocketAddr,
+
+    /// JSON Web Token HMAC secret.
+    ///
+    /// Set this to the base64 encoding of a randomly generated secret.
+    #[serde(rename = "token-hs256-secret-base64")]
+    pub token_hs256_secret: Option<String>,
+
     /// Storage.
     pub storage: StorageConfig,
+
     /// Compression.
     #[serde(default = "Default::default")]
     pub compression: CompressionConfig,
+
     /// Data chunking.
     #[serde(default = "Default::default")]
     pub chunking: ChunkingConfig,
+
     /// Signing keypair.
     #[serde(rename = "signing_key")]
     pub keypair: String,

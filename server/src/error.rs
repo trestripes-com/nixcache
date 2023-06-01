@@ -1,12 +1,14 @@
 use std::fmt;
 use std::error::Error as StdError;
-use anyhow::Error as AnyError;
+use anyhow::{anyhow, Error as AnyError};
 use displaydoc::Display;
 use serde::Serialize;
 use tracing_error::SpanTrace;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
+
+use auth::JWTError;
 
 pub type ServerResult<T> = Result<T, ServerError>;
 
@@ -17,6 +19,8 @@ pub enum ErrorKind {
     InternalServerError,
     /// The URL you requested was not found.
     NotFound,
+    /// Unauthorized.
+    Unauthorized,
     /// Storage error: {0}
     StorageError(AnyError),
     /// General request error: {0}
@@ -25,6 +29,10 @@ pub enum ErrorKind {
     InvalidCompressionType { name: String },
     /// Manifest serialization error: {0}
     ManifestSerializationError(super::nix_manifest::Error),
+    /// Invalid authentication token.
+    InvalidToken,
+    /// JWT authentication error.
+    JWTError(JWTError),
 }
 impl ErrorKind {
     /// Returns a version of this error for clients.
@@ -32,10 +40,13 @@ impl ErrorKind {
         match self {
             Self::InternalServerError => self,
             Self::NotFound => self,
+            Self::Unauthorized => self,
             Self::StorageError(_) => Self::InternalServerError,
             Self::RequestError(_) => self,
             Self::InvalidCompressionType { .. } => self,
             Self::ManifestSerializationError(_) => Self::InternalServerError,
+            Self::InvalidToken => Self::RequestError(anyhow!("Invalid token")),
+            Self::JWTError(_) => Self::Unauthorized,
         }
     }
 
@@ -43,20 +54,26 @@ impl ErrorKind {
         match self {
             Self::InternalServerError => "InternalServerError",
             Self::NotFound => "NotFound",
+            Self::Unauthorized => "Unauthorized",
             Self::StorageError(_) => "StorageError",
             Self::RequestError(_) => "RequestError",
             Self::InvalidCompressionType { .. } => "InvalidCompressionType",
             Self::ManifestSerializationError(_) => "ManifestSerializationError",
+            Self::InvalidToken => "InvalidToken",
+            Self::JWTError(_) => "JWTError",
         }
     }
     fn http_status_code(&self) -> StatusCode {
         match self {
             Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             Self::NotFound => StatusCode::NOT_FOUND,
+            Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::StorageError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::RequestError(_) => StatusCode::BAD_REQUEST,
             Self::InvalidCompressionType { .. } => StatusCode::BAD_REQUEST,
             Self::ManifestSerializationError(_) => StatusCode::BAD_REQUEST,
+            Self::InvalidToken => StatusCode::BAD_REQUEST,
+            Self::JWTError(_) => StatusCode::UNAUTHORIZED,
         }
     }
 }
@@ -82,6 +99,9 @@ impl ServerError {
     }
     pub fn request_error(error: impl StdError + Send + Sync + 'static) -> Self {
         ErrorKind::RequestError(AnyError::new(error)).into()
+    }
+    pub fn auth_error(error: JWTError) -> Self {
+        ErrorKind::JWTError(error).into()
     }
 }
 impl fmt::Display for ServerError {
