@@ -4,6 +4,7 @@ members = [
   "common",
   "server",
   "client",
+  "auth",
   "nixbase32",
   "libnixstore",
 ]
