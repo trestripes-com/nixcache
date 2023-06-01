@@ -1,4 +1,15 @@
+# Server listening address.
+#
+# Use `127.0.0.1:8080` for local cache and testing.
+# To make it accessible over internet set the address to: `0.0.0.0:8080`.
 listen = "127.0.0.1:8080"
+
+# Secret JWT keypair.
+#
+# Generate using `nixcache-auth new`.
+#
+# Set this to the base64 encoding of a randomly generated secret.
+token-hs256-secret-base64 = "Qcy6MzWJJgREAjuSY06tk2KQTv9lsy4HwQAkSKGa/tE="
 
 # Signing keypair.
 #
@@ -10,6 +21,7 @@ listen = "127.0.0.1:8080"
 # with a suffix denoting the number of the key (to be incremented every time you need to revoke a key).
 signing_key = "test.nixcache-0:pcSJR7QTVSAyx1jcMbGvHYfljUboVn7mw3qWheyx9ySXLWZAZMJYGS8JPAfD8SinuaHtawM4HvbpG+A9z+0laA=="
 
+# Storage backend configuration.
 [storage]
 type = "local"
 path = "/tmp/_nixcache"
