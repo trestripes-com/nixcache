@@ -17,7 +17,7 @@ use tower_http::trace::TraceLayer;
 use crate::config::{Config, StorageConfig};
 use crate::error::{ErrorKind, ServerResult};
 use crate::storage::{StorageBackend, local::LocalBackend};
-use crate::access::apply_auth;
+use crate::access::RequireAuth;
 
 /// Global server state.
 #[derive(Debug, Clone)]
@@ -62,7 +62,7 @@ pub async fn run_api_server(config: Config) -> Result<()> {
     let rest = Router::new()
         .merge(api::router())
         .fallback(fallback)
-        .layer(axum::middleware::from_fn(apply_auth))
+        .layer(axum::middleware::from_extractor_with_state::<RequireAuth, Arc<State>>(Arc::clone(&state)))
         .route("/", get(home))
         .layer(Extension(state))
         .layer(TraceLayer::new_for_http())

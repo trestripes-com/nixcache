@@ -1,41 +1,36 @@
 use std::sync::Arc;
 use axum::{
-    http::Request, middleware::Next, response::Response,
     headers::{Authorization, authorization::Bearer},
     TypedHeader,
     extract::FromRequestParts,
+    http::request::Parts,
 };
+use async_trait::async_trait;
 
 use auth::{MACLike, NoCustomClaims};
 use crate::State;
-use crate::error::{ServerResult, ServerError, ErrorKind};
+use crate::error::{ServerError, ErrorKind};
 
-/// Performs auth.
-pub async fn apply_auth<B>(req: Request<B>, next: Next<B>) -> ServerResult<Response>
-where
-    B: Send + 'static,
-{
-    let state = req.extensions().get::<Arc<State>>().unwrap();
+pub struct RequireAuth;
 
-    match state.config.token_hs256_secret.clone() {
-        // Check auth.
-        Some(key) => {
-            let (mut parts, body) = req.into_parts();
+#[async_trait]
+impl FromRequestParts<Arc<State>> for RequireAuth {
+    type Rejection = ServerError;
 
-            let TypedHeader(Authorization(bearer)) =
-                TypedHeader::<Authorization<Bearer>>::from_request_parts(&mut parts, &())
-                    .await
-                    .map_err(|_| ServerError::from(ErrorKind::InvalidToken))?;
+    async fn from_request_parts(parts: &mut Parts, state: &Arc<State>) -> Result<Self, Self::Rejection> {
+        match &state.config.token_hs256_secret {
+            Some(key) => {
+                let TypedHeader(Authorization(bearer)) =
+                    TypedHeader::<Authorization<Bearer>>::from_request_parts(parts, state)
+                        .await
+                        .map_err(|_| ServerError::from(ErrorKind::InvalidToken))?;
 
-            let _claims = key.verify_token::<NoCustomClaims>(bearer.token(), None)
-                .map_err(ServerError::auth_error)?;
+                let _claims = key.verify_token::<NoCustomClaims>(bearer.token(), None)
+                    .map_err(ServerError::auth_error)?;
 
-            let req = Request::from_parts(parts, body);
-
-            Ok(next.run(req).await)
-        },
-
-        // No jwt secret => no auth check.
-        None => Ok(next.run(req).await),
+                Ok(Self)
+            },
+            None => Ok(Self),
+        }
     }
 }
