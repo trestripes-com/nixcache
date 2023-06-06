@@ -2,6 +2,8 @@ mod cli;
 mod command;
 mod config;
 mod api;
+mod nix_config;
+mod nix_netrc;
 
 use anyhow::Result;
 

@@ -7,3 +7,4 @@ pub mod header {
 }
 
 pub mod upload_path;
+pub mod cache_config;

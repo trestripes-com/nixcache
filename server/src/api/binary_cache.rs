@@ -74,8 +74,8 @@ impl IntoResponse for NixCacheInfo {
 async fn get_nix_cache_info() -> ServerResult<NixCacheInfo> {
     let info = NixCacheInfo {
         want_mass_query: true,
-        store_dir: "/nix/store".into(),
-        priority: 80,
+        store_dir: super::v1::CACHE_STOREDIR.into(),
+        priority: super::v1::CACHE_PRIORITY,
     };
     Ok(info)
 }

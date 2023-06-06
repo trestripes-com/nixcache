@@ -8,7 +8,7 @@ use futures::{
 };
 use reqwest::{header::HeaderValue, Body, Client as HttpClient, Url};
 
-use common::v1::{header, upload_path};
+use common::v1::{header, upload_path, cache_config::CacheConfig};
 use crate::config::ServerConfig;
 use super::error::Error;
 
@@ -40,6 +40,23 @@ impl Client {
             token: config.token,
             client,
         })
+    }
+
+    /// Returns the configuration of a cache.
+    pub async fn get_cache_config(&self) -> Result<CacheConfig> {
+        let endpoint = self
+            .endpoint
+            .join("_api/v1/cache-config")?;
+
+        let res = self.client.get(endpoint).send().await?;
+
+        if res.status().is_success() {
+            let cache_config = res.json().await?;
+            Ok(cache_config)
+        } else {
+            let api_error = Error::try_from_response(res).await?;
+            Err(api_error.into())
+        }
     }
 
     /// Uploads a path.
