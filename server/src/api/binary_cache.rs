@@ -20,6 +20,7 @@ use axum::{
 use serde::Serialize;
 use tokio::io::AsyncReadExt;
 use tokio_util::io::ReaderStream;
+use futures::TryStreamExt;
 use futures::stream::BoxStream;
 use tracing::instrument;
 
@@ -121,6 +122,16 @@ async fn get_store_path_info(
                 .map_err(ServerError::storage_error)?;
             nar.into_narinfo(&store_path_hash)
         },
+        Download::Stream(stream) => {
+            use futures::AsyncReadExt;
+
+            let mut nar = Vec::new();
+            stream.into_async_read().read_to_end(&mut nar).await
+                .map_err(ServerError::storage_error)?;
+            let nar: UploadedNar = serde_json::from_slice(&nar)
+                .map_err(ServerError::storage_error)?;
+            nar.into_narinfo(&store_path_hash)
+        },
     };
 
     if narinfo.signature().is_none() {
@@ -171,6 +182,15 @@ async fn get_nar(
             serde_json::from_slice(&nar)
                 .map_err(ServerError::storage_error)?
         },
+        Download::Stream(stream) => {
+            use futures::AsyncReadExt;
+
+            let mut nar = Vec::new();
+            stream.into_async_read().read_to_end(&mut nar).await
+                .map_err(ServerError::storage_error)?;
+            serde_json::from_slice(&nar)
+                .map_err(ServerError::storage_error)?
+        },
     };
 
     // Stream merged chunks
@@ -182,7 +202,11 @@ async fn get_nar(
                 let stream = ReaderStream::new(stream);
                 let body = StreamBody::new(stream);
                 Ok(body.into_response())
-            }
+            },
+            Download::Stream(stream) => {
+                let body = StreamBody::new(stream);
+                Ok(body.into_response())
+            },
         }
     } else {
         // reassemble NAR
@@ -200,7 +224,8 @@ async fn get_nar(
                 Download::AsyncRead(stream) => {
                     let stream: BoxStream<_> = Box::pin(ReaderStream::new(stream));
                     Ok(stream)
-                }
+                },
+                Download::Stream(stream) => Ok(stream),
             }
         };
 

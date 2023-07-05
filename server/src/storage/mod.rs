@@ -1,17 +1,21 @@
 pub mod local;
+pub mod s3;
 
+use bytes::Bytes;
+use futures::stream::BoxStream;
 use tokio::io::AsyncRead;
 
 use crate::error::ServerResult;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RemoteFile {
-    Chunk(String),
-    Nar(String),
+    Local(local::LocalRemoteFile),
+    S3(s3::S3RemoteFile),
 }
 
 /// Way to download a file.
 pub enum Download {
+    Stream(BoxStream<'static, std::io::Result<Bytes>>),
     AsyncRead(Box<dyn AsyncRead + Unpin + Send>),
 }
 

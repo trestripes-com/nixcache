@@ -7,6 +7,7 @@ pub mod narinfo;
 pub mod nix_manifest;
 pub mod stream;
 pub mod access;
+pub mod finally;
 
 use anyhow::Result;
 use std::sync::Arc;

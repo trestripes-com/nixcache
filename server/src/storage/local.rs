@@ -12,6 +12,15 @@ pub struct LocalBackend {
     config: LocalStorageConfig,
 }
 
+/// Reference to a file in local storage.
+///
+/// We still call it "remote file" for consistency :)
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct LocalRemoteFile {
+    /// Name of the file.
+    pub name: String,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct LocalStorageConfig {
     /// The directory to store all files under.
@@ -72,7 +81,9 @@ impl StorageBackend for LocalBackend {
         stream: &mut (dyn AsyncRead + Unpin + Send),
     ) -> ServerResult<RemoteFile> {
         self.upload(self.get_chunk_path(&name), stream).await?;
-        Ok(RemoteFile::Chunk(name))
+        Ok(RemoteFile::Local(LocalRemoteFile {
+            name
+        }))
     }
     async fn upload_nar(
         &self,
@@ -80,7 +91,9 @@ impl StorageBackend for LocalBackend {
         stream: &mut (dyn AsyncRead + Unpin + Send),
     ) -> ServerResult<RemoteFile> {
         self.upload(self.get_nar_path(&name), stream).await?;
-        Ok(RemoteFile::Nar(name))
+        Ok(RemoteFile::Local(LocalRemoteFile {
+            name
+        }))
     }
     async fn download_chunk(
         &self,
