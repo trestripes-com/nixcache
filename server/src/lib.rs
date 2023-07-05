@@ -17,7 +17,10 @@ use tower_http::trace::TraceLayer;
 
 use crate::config::{Config, StorageConfig};
 use crate::error::{ErrorKind, ServerResult};
-use crate::storage::{StorageBackend, local::LocalBackend};
+use crate::storage::{
+    StorageBackend,
+    local::LocalBackend, s3::S3Backend,
+};
 use crate::access::RequireAuth;
 
 /// Global server state.
@@ -30,13 +33,18 @@ pub struct State {
 }
 impl State {
     async fn new(config: Config) -> Result<Arc<Self>> {
-        let storage = match &config.storage {
-            StorageConfig::Local(local_config) => {
-                let local = LocalBackend::new(local_config.clone()).await?;
-                let boxed: Box<dyn StorageBackend> = Box::new(local);
-                Arc::new(boxed)
-            }
-        };
+        let storage = Arc::new(match &config.storage {
+            StorageConfig::Local(config) => {
+                let backend = LocalBackend::new(config.clone()).await?;
+                let boxed: Box<dyn StorageBackend> = Box::new(backend);
+                boxed
+            },
+            StorageConfig::S3(config) => {
+                let backend = S3Backend::new(config.clone()).await?;
+                let boxed: Box<dyn StorageBackend> = Box::new(backend);
+                boxed
+            },
+        });
 
         Ok(Arc::new(Self {
             config,

@@ -7,8 +7,9 @@ use async_compression::Level as CompressionLevel;
 
 use common::signing::Keypair;
 use auth::{HS256Key, decode_token_hs256_secret_base64};
-use crate::storage::local::LocalStorageConfig;
 use crate::narinfo::Compression as NixCompression;
+use crate::storage::local::LocalStorageConfig;
+use crate::storage::s3::S3StorageConfig;
 
 const CONFIG_PATH: &str = "/trestripes/nixcache/config.toml";
 
@@ -113,6 +114,9 @@ pub enum StorageConfig {
     /// Local file storage.
     #[serde(rename = "local")]
     Local(LocalStorageConfig),
+    /// S3 file storage.
+    #[serde(rename = "s3")]
+    S3(S3StorageConfig),
 }
 
 /// Compression configuration.
