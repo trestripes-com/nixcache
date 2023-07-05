@@ -27,9 +27,11 @@ pub struct Config {
     /// Signing keypair.
     pub keypair: Keypair,
 }
-impl TryFrom<ConfigInfo> for Config {
+impl TryFrom<ConfigInfoVersioned> for Config {
     type Error = anyhow::Error;
-    fn try_from(config: ConfigInfo) -> Result<Self> {
+    fn try_from(versioned: ConfigInfoVersioned) -> Result<Self> {
+        let config: ConfigInfo = versioned.into();
+
         let token_hs256_secret = config.token_hs256_secret
             .map(|x| decode_token_hs256_secret_base64(&x)).transpose()?;
 
@@ -54,10 +56,24 @@ pub async fn load(path: Option<PathBuf>) -> Result<Config> {
 
     if path.is_file() {
         let data = read_to_string(path)?;
-        let config: ConfigInfo = toml::from_str(&data)?;
+        let config: ConfigInfoVersioned = toml::from_str(&data)?;
         config.try_into()
     } else {
         Err(anyhow!("No config found."))
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "version")]
+pub enum ConfigInfoVersioned {
+    #[serde(rename = "v1")]
+    V1(ConfigInfo),
+}
+impl Into<ConfigInfo> for ConfigInfoVersioned {
+    fn into(self) -> ConfigInfo {
+        match self {
+            ConfigInfoVersioned::V1(config) => config,
+        }
     }
 }
 

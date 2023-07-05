@@ -33,7 +33,7 @@ pub async fn run(opts: Opts) -> Result<()> {
     let path = opts.config;
     let data: ConfigData = sub.clone().into();
 
-    let config = Config::new(path, data)?;
+    let config = Config::new(path, data.into())?;
     config.save()?;
 
     eprintln!("Updated nixcache config.");

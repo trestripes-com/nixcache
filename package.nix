@@ -12,6 +12,8 @@
 let
 demo-url = "127.0.0.1:8080";
 demo-config-server = writeText "config.toml" ''
+version = "v1"
+
 listen = "${demo-url}"
 
 signing_key = "demo.nixcache-0:vjg4zb3o8U3SapIoeG5dWZ9+G4OyqA96J2+nxuoMPCT3a7/zXWgXpuKr+rJWChlyTGeCV2aARebK+ffmh+u2fw=="
@@ -21,6 +23,8 @@ type = "local"
 path = "/tmp/_demo_nixcache"
 '';
 demo-config-client = writeText "config.toml" ''
+version = "v1"
+
 [server]
 endpoint = "http://${demo-url}"
 '';

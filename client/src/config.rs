@@ -22,7 +22,7 @@ pub struct Config {
     pub path: PathBuf,
 }
 impl Config {
-    pub fn new(path: Option<PathBuf>, data: ConfigData) -> Result<Self> {
+    pub fn new(path: Option<PathBuf>, data: ConfigDataVersioned) -> Result<Self> {
         let path = match path {
             Some(path) => path,
             None => get_config_path()?,
@@ -30,7 +30,7 @@ impl Config {
 
         Ok(Self {
             path,
-            data,
+            data: data.into(),
         })
     }
 
@@ -44,10 +44,10 @@ impl Config {
         if path.exists() {
             let contents = fs::read(&path)?;
             let s = std::str::from_utf8(&contents)?;
-            let data: ConfigData = toml::from_str(s)?;
+            let data: ConfigDataVersioned = toml::from_str(s)?;
             return Ok(Config {
                 path,
-                data,
+                data: data.into(),
             });
         }
 
@@ -55,7 +55,8 @@ impl Config {
     }
     /// Saves the configuration back to the system, if possible.
     pub fn save(&self) -> Result<()> {
-        let serialized = toml::to_string(&self.data)?;
+        let config: ConfigDataVersioned = self.data.clone().into();
+        let serialized = toml::to_string(&config)?;
 
         // This isn't atomic, so some other process might chmod it
         // to something else before we write. We don't handle this case.
@@ -75,6 +76,25 @@ impl Config {
         tracing::debug!("Saved modified configuration to {:?}", self.path);
 
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "version")]
+pub enum ConfigDataVersioned {
+    #[serde(rename = "v1")]
+    V1(ConfigData),
+}
+impl Into<ConfigData> for ConfigDataVersioned {
+    fn into(self) -> ConfigData {
+        match self {
+            ConfigDataVersioned::V1(config) => config,
+        }
+    }
+}
+impl From<ConfigData> for ConfigDataVersioned {
+    fn from(config: ConfigData) -> Self {
+        ConfigDataVersioned::V1(config)
     }
 }
 
