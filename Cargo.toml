@@ -8,3 +8,5 @@ members = [
   "nixbase32",
   "libnixstore",
 ]
+
+resolver = "2"
