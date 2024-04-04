@@ -1,4 +1,4 @@
-{ rustPlatform
+{ makeRustPlatform
 , pkg-config
 , gcc
 , nix
@@ -7,6 +7,7 @@
 , writeText
 , writeShellScriptBin
 , symlinkJoin
+, rust-bin
 }:
 
 let
@@ -29,8 +30,13 @@ version = "v1"
 endpoint = "http://${demo-url}"
 '';
 
+myRustPlatform = makeRustPlatform {
+  cargo = rust-bin.stable.latest.default;
+  rustc = rust-bin.stable.latest.default;
+};
+
 in rec {
-  nixcache = rustPlatform.buildRustPackage {
+  nixcache = myRustPlatform.buildRustPackage {
     name = "nixcache";
     src = ./.;
     cargoLock = {
@@ -39,7 +45,7 @@ in rec {
 
     nativeBuildInputs = [
       pkg-config
-      rustPlatform.bindgenHook
+      myRustPlatform.bindgenHook
       gcc
     ];
     buildInputs = [
